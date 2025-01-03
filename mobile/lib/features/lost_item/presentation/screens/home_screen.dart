@@ -180,6 +180,7 @@ class HomeScreen extends HookConsumerWidget {
               const Icon(
                 Icons.add,
                 size: 28,
+                color: Colors.white,  // アイコンの色を白に設定
               ),
               const SizedBox(width: 12),
               Text(

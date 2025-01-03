@@ -66,38 +66,32 @@ class LostItemFormScreen extends HookConsumerWidget {
 
       return () {
         if (scrollController.hasClients) {
-          scrollController.position.isScrollingNotifier.removeListener(listener);
+          scrollController.position.isScrollingNotifier
+              .removeListener(listener);
         }
       };
     }, [scrollController]);
 
-    // Create FocusNode for each text field
-    final nameNode = useFocusNode();
-    final phoneNode = useFocusNode();
-    final postalCodeNode = useFocusNode();
-    final addressNode = useFocusNode();
-    final routeNode = useFocusNode();
-    final vehicleNode = useFocusNode();
-    final otherLocationNode = useFocusNode();
-    final itemNameNode = useFocusNode();
-    final itemColorNode = useFocusNode();
-    final itemDescriptionNode = useFocusNode();
+    // Create and memoize FocusNodes
+    final nodes = useMemoized(
+        () => {
+              'name': FocusNode(),
+              'phone': FocusNode(),
+              'postalCode': FocusNode(),
+              'address': FocusNode(),
+              'route': FocusNode(),
+              'vehicle': FocusNode(),
+              'otherLocation': FocusNode(),
+              'itemName': FocusNode(),
+              'itemColor': FocusNode(),
+              'itemDescription': FocusNode(),
+            },
+        []);
 
+    // Handle focus changes and cleanup
     useEffect(() {
-      void listener() {
-        final hasFocus = [
-          nameNode,
-          phoneNode,
-          postalCodeNode,
-          addressNode,
-          routeNode,
-          vehicleNode,
-          otherLocationNode,
-          itemNameNode,
-          itemColorNode,
-          itemDescriptionNode,
-        ].any((node) => node.hasFocus);
-
+      void focusListener() {
+        final hasFocus = nodes.values.any((node) => node.hasFocus);
         if (hasFocus) {
           hideButtons();
         } else {
@@ -105,39 +99,21 @@ class LostItemFormScreen extends HookConsumerWidget {
         }
       }
 
-      nameNode.addListener(listener);
-      phoneNode.addListener(listener);
-      postalCodeNode.addListener(listener);
-      addressNode.addListener(listener);
-      routeNode.addListener(listener);
-      vehicleNode.addListener(listener);
-      otherLocationNode.addListener(listener);
-      itemNameNode.addListener(listener);
-      itemColorNode.addListener(listener);
-      itemDescriptionNode.addListener(listener);
+      // Add listeners
+      nodes.values.forEach((node) => node.addListener(focusListener));
 
+      // Cleanup
       return () {
-        nameNode.removeListener(listener);
-        phoneNode.removeListener(listener);
-        postalCodeNode.removeListener(listener);
-        addressNode.removeListener(listener);
-        routeNode.removeListener(listener);
-        vehicleNode.removeListener(listener);
-        otherLocationNode.removeListener(listener);
-        itemNameNode.removeListener(listener);
-        itemColorNode.removeListener(listener);
-        itemDescriptionNode.removeListener(listener);
-
-        nameNode.dispose();
-        phoneNode.dispose();
-        postalCodeNode.dispose();
-        addressNode.dispose();
-        routeNode.dispose();
-        vehicleNode.dispose();
-        otherLocationNode.dispose();
-        itemNameNode.dispose();
-        itemColorNode.dispose();
-        itemDescriptionNode.dispose();
+        try {
+          for (final node in nodes.values) {
+            if (node.hasListeners) {
+              node.removeListener(focusListener);
+            }
+            node.dispose();
+          }
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
       };
     }, []);
 
@@ -252,7 +228,12 @@ class LostItemFormScreen extends HookConsumerWidget {
               },
               child: SingleChildScrollView(
                 controller: scrollController,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 120, // ボタンの高さ + 余白分のパディングを追加
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -322,7 +303,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                       children: [
                         FormBuilderTextField(
                           name: 'finderName',
-                          focusNode: nameNode,
+                          focusNode: nodes['name'],
                           decoration: InputDecoration(
                             labelText: '氏名',
                             labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -333,7 +314,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                         const SizedBox(height: 16),
                         FormBuilderTextField(
                           name: 'finderPhone',
-                          focusNode: phoneNode,
+                          focusNode: nodes['phone'],
                           decoration: InputDecoration(
                             labelText: '電話番号',
                             labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -349,7 +330,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                               flex: 4,
                               child: FormBuilderTextField(
                                 name: 'postalCode',
-                                focusNode: postalCodeNode,
+                                focusNode: nodes['postalCode'],
                                 decoration: InputDecoration(
                                   labelText: '郵便番号',
                                   labelStyle:
@@ -397,7 +378,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                         const SizedBox(height: 16),
                         FormBuilderTextField(
                           name: 'finderAddress',
-                          focusNode: addressNode,
+                          focusNode: nodes['address'],
                           decoration: InputDecoration(
                             labelText: '住所',
                             labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -473,7 +454,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                             Expanded(
                               child: FormBuilderTextField(
                                 name: 'routeName',
-                                focusNode: routeNode,
+                                focusNode: nodes['route'],
                                 decoration: InputDecoration(
                                   labelText: '路線',
                                   labelStyle:
@@ -487,7 +468,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                             Expanded(
                               child: FormBuilderTextField(
                                 name: 'vehicleNumber',
-                                focusNode: vehicleNode,
+                                focusNode: nodes['vehicle'],
                                 decoration: InputDecoration(
                                   labelText: '車番',
                                   labelStyle:
@@ -502,7 +483,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                         const SizedBox(height: 16),
                         FormBuilderTextField(
                           name: 'otherLocation',
-                          focusNode: otherLocationNode,
+                          focusNode: nodes['otherLocation'],
                           decoration: InputDecoration(
                             labelText: 'その他の場所',
                             labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -524,7 +505,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                         const SizedBox(height: 16),
                         FormBuilderTextField(
                           name: 'itemName',
-                          focusNode: itemNameNode,
+                          focusNode: nodes['itemName'],
                           decoration: InputDecoration(
                             labelText: '遺失物の名称 *',
                             labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -539,7 +520,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                         const SizedBox(height: 16),
                         FormBuilderTextField(
                           name: 'itemColor',
-                          focusNode: itemColorNode,
+                          focusNode: nodes['itemColor'],
                           decoration: InputDecoration(
                             labelText: '色',
                             labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -552,7 +533,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                         const SizedBox(height: 16),
                         FormBuilderTextField(
                           name: 'itemDescription',
-                          focusNode: itemDescriptionNode,
+                          focusNode: nodes['itemDescription'],
                           decoration: InputDecoration(
                             labelText: '特徴など',
                             labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -612,89 +593,92 @@ class LostItemFormScreen extends HookConsumerWidget {
               left: 0,
               right: 0,
               bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          if (formKey.value.currentState?.saveAndValidate() ??
-                              false) {
-                            await ref
-                                .read(draftListProvider.notifier)
-                                .saveDraft(formKey.value.currentState!.value,
-                                    draftId: draftId);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('下書きを保存しました')));
-                              Navigator.pop(context);
+              child: SafeArea(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            if (formKey.value.currentState?.saveAndValidate() ??
+                                false) {
+                              await ref
+                                  .read(draftListProvider.notifier)
+                                  .saveDraft(formKey.value.currentState!.value,
+                                      draftId: draftId);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text('下書きを保存しました')));
+                                Navigator.pop(context);
+                              }
                             }
-                          }
-                        },
-                        icon: const Icon(Icons.save_outlined,
-                            size: 24, color: Colors.white),
-                        label: Text(
-                          '下書き保存',
-                          style: GoogleFonts.notoSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          },
+                          icon: const Icon(Icons.save_outlined,
+                              size: 24, color: Colors.white),
+                          label: Text(
+                            '下書き保存',
+                            style: GoogleFonts.notoSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromARGB(255, 223, 170, 36),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromARGB(255, 223, 170, 36),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (formKey.value.currentState?.saveAndValidate() ??
-                              false) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => LostItemConfirmScreen(
-                                  formData: formKey.value.currentState!.value,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (formKey.value.currentState?.saveAndValidate() ??
+                                false) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => LostItemConfirmScreen(
+                                    formData: formKey.value.currentState!.value,
+                                  ),
                                 ),
-                              ),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.check_circle_outline,
-                            size: 24, color: Colors.white),
-                        label: Text(
-                          '確認',
-                          style: GoogleFonts.notoSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.check_circle_outline,
+                              size: 24, color: Colors.white),
+                          label: Text(
+                            '確認',
+                            style: GoogleFonts.notoSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromARGB(255, 12, 51, 135),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromARGB(255, 12, 51, 135),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
