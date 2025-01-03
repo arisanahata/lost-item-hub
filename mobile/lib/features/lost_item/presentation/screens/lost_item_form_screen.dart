@@ -338,8 +338,16 @@ class LostItemFormScreen extends HookConsumerWidget {
                                   prefixIcon: Icon(Icons.location_on,
                                       color: Colors.grey[600]),
                                 ),
-                                validator: FormBuilderValidators.numeric(
-                                    errorText: '数字のみ入力可能です'),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return null; // 空の場合はOK
+                                  }
+                                  // 入力がある場合は数字のみチェック
+                                  if (!RegExp(r'^\d+$').hasMatch(value)) {
+                                    return '数字のみ入力可能です';
+                                  }
+                                  return null;
+                                },
                                 onChanged: (value) =>
                                     onFieldChanged('postalCode', value),
                                 keyboardType: TextInputType.number,
