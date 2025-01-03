@@ -15,11 +15,6 @@ import 'lost_item_confirm_screen.dart';
 class LostItemFormScreen extends HookConsumerWidget {
   LostItemFormScreen({super.key});
 
-  final GlobalKey rightsKey = GlobalKey();
-  final GlobalKey finderInfoKey = GlobalKey();
-  final GlobalKey locationKey = GlobalKey();
-  final GlobalKey itemInfoKey = GlobalKey();
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final formKey = useMemoized(() => GlobalKey<FormBuilderState>(), const []);
@@ -59,50 +54,6 @@ class LostItemFormScreen extends HookConsumerWidget {
 
     final filledFields = useState<Set<String>>({});
 
-    // スクロール処理を実行
-    void scrollToSection(GlobalKey key) {
-      final context = key.currentContext;
-      if (context != null) {
-        Scrollable.ensureVisible(
-          context,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-        );
-      }
-    }
-
-    // フィールド名からセクションキーを取得
-    GlobalKey? getSectionKeyForField(String fieldName) {
-      switch (fieldName) {
-        case 'hasRightsWaiver':
-        case 'rightsOptions':
-        case 'hasConsentToDisclose':
-          return rightsKey;
-        case 'finderName':
-        case 'finderPhone':
-        case 'postalCode':
-        case 'finderAddress':
-          return finderInfoKey;
-        case 'foundDate':
-        case 'foundTime':
-        case 'routeName':
-        case 'vehicleNumber':
-        case 'otherLocation':
-          return locationKey;
-        case 'itemName':
-        case 'itemColor':
-        case 'itemDescription':
-        case 'needsReceipt':
-          return itemInfoKey;
-        default:
-          if (fieldName.startsWith('yen')) {
-            return itemInfoKey;
-          }
-          return null;
-      }
-    }
-
     // フィールド更新時の処理
     void onFieldChanged(String fieldName, dynamic value) {
       // フィールドの状態を更新
@@ -113,16 +64,8 @@ class LostItemFormScreen extends HookConsumerWidget {
       }
 
       // 特定のフィールドの追加処理
-      switch (fieldName) {
-        case 'hasRightsWaiver':
-          showRightsOptions.value = value == false;
-          break;
-      }
-
-      // セクションごとのスクロール処理
-      final sectionKey = getSectionKeyForField(fieldName);
-      if (sectionKey != null) {
-        scrollToSection(sectionKey);
+      if (fieldName == 'hasRightsWaiver') {
+        showRightsOptions.value = value == false;
       }
     }
 
@@ -171,7 +114,6 @@ class LostItemFormScreen extends HookConsumerWidget {
             child: Column(
               children: [
                 _buildSectionCard(
-                  key: rightsKey,
                   title: '権利確認',
                   icon: Icons.gavel,
                   iconColor: Colors.grey[600],
@@ -205,10 +147,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         FormBuilderFieldOption(
                             value: false, child: Text('権利を保持する')),
                       ],
-                      onChanged: (value) {
-                        showRightsOptions.value = value == false;
-                        onFieldChanged('hasRightsWaiver', value);
-                      },
+                      onChanged: (value) =>
+                          onFieldChanged('hasRightsWaiver', value),
                       activeColor: Colors.blue[700],
                     ),
                     if (showRightsOptions.value) ...[
@@ -246,47 +186,11 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ],
                         activeColor: Colors.blue[700],
                       ),
-                      const SizedBox(height: 16),
-                      FormBuilderRadioGroup(
-                        name: 'hasConsentToDisclose',
-                        decoration: InputDecoration(
-                          labelText: '氏名等告知の同意',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: Colors.blue[700]!),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: Colors.red[300]!),
-                          ),
-                        ),
-                        options: const [
-                          FormBuilderFieldOption(
-                              value: true, child: Text('同意する')),
-                          FormBuilderFieldOption(
-                              value: false, child: Text('同意しない')),
-                        ],
-                        onChanged: (value) {
-                          onFieldChanged('hasConsentToDisclose', value);
-                        },
-                        activeColor: Colors.blue[700],
-                      ),
                     ],
                   ],
                 ),
                 const SizedBox(height: 16),
                 _buildSectionCard(
-                  key: finderInfoKey,
                   title: '拾得者情報',
                   icon: Icons.person,
                   iconColor: Colors.grey[600],
@@ -314,9 +218,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('finderName', value);
-                      },
+                      onChanged: (value) => onFieldChanged('finderName', value),
                     ),
                     const SizedBox(height: 16),
                     FormBuilderTextField(
@@ -342,9 +244,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('finderPhone', value);
-                      },
+                      onChanged: (value) =>
+                          onFieldChanged('finderPhone', value),
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 16),
@@ -382,9 +283,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                                 borderSide: BorderSide(color: Colors.red[300]!),
                               ),
                             ),
-                            onChanged: (value) {
-                              onFieldChanged('postalCode', value);
-                            },
+                            onChanged: (value) =>
+                                onFieldChanged('postalCode', value),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -396,14 +296,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                               final code = formKey
                                   .currentState?.fields['postalCode']?.value;
                               if (code != null && code.toString().length == 7) {
-                                final address =
-                                    await searchAddress(code.toString());
-                                if (address != null) {
-                                  formKey.currentState?.patchValue({
-                                    'finderAddress': address,
-                                  });
-                                  onFieldChanged('finderAddress', address);
-                                }
+                                await searchAddress(code.toString());
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -440,16 +333,14 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('finderAddress', value);
-                      },
+                      onChanged: (value) =>
+                          onFieldChanged('finderAddress', value),
                       maxLines: 2,
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 _buildSectionCard(
-                  key: locationKey,
                   title: '拾得場所・日時',
                   icon: Icons.location_on,
                   iconColor: Colors.grey[600],
@@ -534,9 +425,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                             ),
                             inputType: InputType.time,
                             format: DateFormat('HH:mm'),
-                            onChanged: (value) {
-                              onFieldChanged('foundTime', value?.toString());
-                            },
+                            onChanged: (value) =>
+                                onFieldChanged('foundTime', value?.toString()),
                           ),
                         ),
                       ],
@@ -565,9 +455,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('routeName', value);
-                      },
+                      onChanged: (value) => onFieldChanged('routeName', value),
                     ),
                     const SizedBox(height: 16),
                     FormBuilderTextField(
@@ -593,9 +481,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('vehicleNumber', value);
-                      },
+                      onChanged: (value) =>
+                          onFieldChanged('vehicleNumber', value),
                     ),
                     const SizedBox(height: 16),
                     FormBuilderTextField(
@@ -621,15 +508,13 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('otherLocation', value);
-                      },
+                      onChanged: (value) =>
+                          onFieldChanged('otherLocation', value),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 _buildSectionCard(
-                  key: itemInfoKey,
                   title: '基本情報',
                   icon: Icons.info_outline,
                   iconColor: Colors.grey[600],
@@ -659,9 +544,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('itemName', value);
-                      },
+                      onChanged: (value) => onFieldChanged('itemName', value),
                     ),
                     const SizedBox(height: 16),
                     FormBuilderTextField(
@@ -687,9 +570,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('itemColor', value);
-                      },
+                      onChanged: (value) => onFieldChanged('itemColor', value),
                     ),
                     const SizedBox(height: 16),
                     FormBuilderTextField(
@@ -715,9 +596,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                           borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      onChanged: (value) {
-                        onFieldChanged('itemDescription', value);
-                      },
+                      onChanged: (value) =>
+                          onFieldChanged('itemDescription', value),
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
@@ -821,14 +701,12 @@ class LostItemFormScreen extends HookConsumerWidget {
   }
 
   Widget _buildSectionCard({
-    Key? key,
     required String title,
     required IconData icon,
     required List<Widget> children,
     Color? iconColor,
   }) {
     return Card(
-      key: key,
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(
@@ -858,6 +736,75 @@ class LostItemFormScreen extends HookConsumerWidget {
             ...children,
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCashInput(
+      String name, String label, int value, void Function(String?) onChanged) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: FormBuilderTextField(
+              name: name,
+              decoration: InputDecoration(
+                labelText: label,
+                filled: true,
+                fillColor: Colors.white,
+                suffixText: '枚',
+                border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.blue[700]!),
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: onChanged,
+              valueTransformer: (value) => int.tryParse(value ?? '0') ?? 0,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 1,
+            child: Builder(
+              builder: (context) {
+                final count = int.tryParse(
+                      FormBuilder.of(context)
+                              ?.fields[name]
+                              ?.value
+                              ?.toString() ??
+                          '0',
+                    ) ??
+                    0;
+                final amount = count * value;
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: amount > 0 ? Colors.blue[50] : Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '¥${NumberFormat('#,###').format(amount)}',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.notoSans(
+                      color: amount > 0 ? Colors.blue[700] : Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1000,75 +947,6 @@ class LostItemFormScreen extends HookConsumerWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCashInput(
-      String name, String label, int value, void Function(String?) onChanged) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: FormBuilderTextField(
-              name: name,
-              decoration: InputDecoration(
-                labelText: label,
-                filled: true,
-                fillColor: Colors.white,
-                suffixText: '枚',
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                  borderSide: BorderSide(color: Colors.blue[700]!),
-                ),
-              ),
-              keyboardType: TextInputType.number,
-              onChanged: onChanged,
-              valueTransformer: (value) => int.tryParse(value ?? '0') ?? 0,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 1,
-            child: Builder(
-              builder: (context) {
-                final count = int.tryParse(
-                      FormBuilder.of(context)
-                              ?.fields[name]
-                              ?.value
-                              ?.toString() ??
-                          '0',
-                    ) ??
-                    0;
-                final amount = count * value;
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: amount > 0 ? Colors.blue[50] : Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '¥${NumberFormat('#,###').format(amount)}',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.notoSans(
-                      color: amount > 0 ? Colors.blue[700] : Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
