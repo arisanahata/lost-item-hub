@@ -1,56 +1,174 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:expandable/expandable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:expandable/expandable.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:lost_item_hub/features/lost_item/presentation/providers/draft_provider.dart';
+import 'home_screen.dart';
 import 'lost_item_confirm_screen.dart';
 
 class LostItemFormScreen extends HookConsumerWidget {
-  const LostItemFormScreen({super.key});
+  final String? draftId;
+
+  const LostItemFormScreen({
+    super.key,
+    this.draftId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final formKey = useMemoized(() => GlobalKey<FormBuilderState>(), const []);
+    final formKey = useState(GlobalKey<FormBuilderState>());
     final imagePicker = useMemoized(() => ImagePicker(), const []);
     final selectedImages = useState<List<XFile>>([]);
     final showRightsOptions = useState(false);
-    final initialValues = useMemoized(
-        () => {
-              'foundDate': DateTime.now(),
-              'foundTime': DateTime.now(),
-              'hasRightsWaiver': false,
-              'rightsOptions': <String>[],
-              'hasConsentToDisclose': false,
-              'finderName': '',
-              'finderPhone': '',
-              'postalCode': '',
-              'finderAddress': '',
-              'routeName': '',
-              'vehicleNumber': '',
-              'otherLocation': '',
-              'yen10000': '0',
-              'yen5000': '0',
-              'yen2000': '0',
-              'yen1000': '0',
-              'yen500': '0',
-              'yen100': '0',
-              'yen50': '0',
-              'yen10': '0',
-              'yen5': '0',
-              'yen1': '0',
-              'itemName': '',
-              'itemColor': '',
-              'itemDescription': '',
-              'needsReceipt': false,
-            },
-        const []);
+    final showButtons = useState(true);
+    final scrollController = useScrollController();
+    final timer = useState<Timer?>(null);
+    final isInteracting = useState(false);
+
+    void hideButtons() {
+      showButtons.value = false;
+      timer.value?.cancel();
+    }
+
+    void startShowButtonsTimer() {
+      if (!isInteracting.value) {
+        timer.value = Timer(const Duration(milliseconds: 500), () {
+          if (context.mounted) {
+            showButtons.value = true;
+          }
+        });
+      }
+    }
+
+    useEffect(() {
+      void listener() {
+        if (!scrollController.hasClients) return;
+        if (scrollController.position.isScrollingNotifier.value) {
+          isInteracting.value = true;
+          hideButtons();
+        } else {
+          isInteracting.value = false;
+          startShowButtonsTimer();
+        }
+      }
+
+      if (scrollController.hasClients) {
+        scrollController.position.isScrollingNotifier.addListener(listener);
+      }
+
+      return () {
+        if (scrollController.hasClients) {
+          scrollController.position.isScrollingNotifier.removeListener(listener);
+        }
+      };
+    }, [scrollController]);
+
+    // Create FocusNode for each text field
+    final nameNode = useFocusNode();
+    final phoneNode = useFocusNode();
+    final postalCodeNode = useFocusNode();
+    final addressNode = useFocusNode();
+    final routeNode = useFocusNode();
+    final vehicleNode = useFocusNode();
+    final otherLocationNode = useFocusNode();
+    final itemNameNode = useFocusNode();
+    final itemColorNode = useFocusNode();
+    final itemDescriptionNode = useFocusNode();
+
+    useEffect(() {
+      void listener() {
+        final hasFocus = [
+          nameNode,
+          phoneNode,
+          postalCodeNode,
+          addressNode,
+          routeNode,
+          vehicleNode,
+          otherLocationNode,
+          itemNameNode,
+          itemColorNode,
+          itemDescriptionNode,
+        ].any((node) => node.hasFocus);
+
+        if (hasFocus) {
+          hideButtons();
+        } else {
+          startShowButtonsTimer();
+        }
+      }
+
+      nameNode.addListener(listener);
+      phoneNode.addListener(listener);
+      postalCodeNode.addListener(listener);
+      addressNode.addListener(listener);
+      routeNode.addListener(listener);
+      vehicleNode.addListener(listener);
+      otherLocationNode.addListener(listener);
+      itemNameNode.addListener(listener);
+      itemColorNode.addListener(listener);
+      itemDescriptionNode.addListener(listener);
+
+      return () {
+        nameNode.removeListener(listener);
+        phoneNode.removeListener(listener);
+        postalCodeNode.removeListener(listener);
+        addressNode.removeListener(listener);
+        routeNode.removeListener(listener);
+        vehicleNode.removeListener(listener);
+        otherLocationNode.removeListener(listener);
+        itemNameNode.removeListener(listener);
+        itemColorNode.removeListener(listener);
+        itemDescriptionNode.removeListener(listener);
+
+        nameNode.dispose();
+        phoneNode.dispose();
+        postalCodeNode.dispose();
+        addressNode.dispose();
+        routeNode.dispose();
+        vehicleNode.dispose();
+        otherLocationNode.dispose();
+        itemNameNode.dispose();
+        itemColorNode.dispose();
+        itemDescriptionNode.dispose();
+      };
+    }, []);
+
+    final Map<String, dynamic> initialValues = {
+      'foundDate': DateTime.now(),
+      'foundTime': DateTime.now(),
+      'hasRightsWaiver': true,
+      'rightsOptions': <String>[],
+      'hasConsentToDisclose': false,
+      'finderName': '',
+      'finderPhone': '',
+      'postalCode': '',
+      'finderAddress': '',
+      'routeName': '',
+      'vehicleNumber': '',
+      'otherLocation': '',
+      'yen10000': '0',
+      'yen5000': '0',
+      'yen2000': '0',
+      'yen1000': '0',
+      'yen500': '0',
+      'yen100': '0',
+      'yen50': '0',
+      'yen10': '0',
+      'yen5': '0',
+      'yen1': '0',
+      'itemName': '',
+      'itemColor': '',
+      'itemDescription': '',
+      'needsReceipt': false,
+    };
 
     final filledFields = useState<Set<String>>({});
 
@@ -70,10 +188,8 @@ class LostItemFormScreen extends HookConsumerWidget {
       if (code.length != 7) return null;
 
       try {
-        final response = await http.get(
-          Uri.parse('https://zipcloud.ibsnet.co.jp/api/search?zipcode=$code'),
-        );
-
+        final response = await http.get(Uri.parse(
+            'https://zipcloud.ibsnet.co.jp/api/search?zipcode=$code'));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           if (data['results'] != null && data['results'].isNotEmpty) {
@@ -81,9 +197,7 @@ class LostItemFormScreen extends HookConsumerWidget {
             final address =
                 '${result['address1']}${result['address2']}${result['address3']}';
 
-            formKey.currentState?.patchValue({
-              'finderAddress': address,
-            });
+            formKey.value.currentState?.patchValue({'finderAddress': address});
             onFieldChanged('finderAddress', address);
 
             return address;
@@ -96,441 +210,495 @@ class LostItemFormScreen extends HookConsumerWidget {
       }
     }
 
+    useEffect(() {
+      if (draftId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          final draft =
+              await ref.read(draftListProvider.notifier).getDraft(draftId!);
+          if (draft != null) {
+            formKey.value.currentState?.patchValue(draft.formData);
+          }
+        });
+      }
+      return null;
+    }, []);
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          '遺失物連絡票',
+          '忘れ物登録',
           style: GoogleFonts.notoSans(
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
         ),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: OutlinedButton.icon(
-              onPressed: () {
-                // TODO: 下書き保存の処理
+      ),
+      body: Stack(
+        children: [
+          FormBuilder(
+            key: formKey.value,
+            initialValue: initialValues,
+            child: Listener(
+              onPointerDown: (_) {
+                isInteracting.value = true;
+                hideButtons();
               },
-              icon: Icon(Icons.save_outlined,
-                  size: 18, color: const Color(0xFF1a56db)),
-              label: Text('下書き保存',
-                  style: TextStyle(color: const Color(0xFF1a56db))),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF1a56db)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+              onPointerUp: (_) {
+                isInteracting.value = false;
+                startShowButtonsTimer();
+              },
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildSectionCard(
+                      title: '権利確認',
+                      icon: Icons.gavel,
+                      iconColor: Colors.grey[600],
+                      children: [
+                        FormBuilderRadioGroup(
+                          name: 'hasRightsWaiver',
+                          decoration: const InputDecoration(
+                            labelText: '権利放棄',
+                          ),
+                          options: const [
+                            FormBuilderFieldOption(
+                                value: true, child: Text('一切の権利を放棄')),
+                            FormBuilderFieldOption(
+                                value: false, child: Text('権利を保持する')),
+                          ],
+                          onChanged: (value) {
+                            showRightsOptions.value = value == false;
+                            onFieldChanged('hasRightsWaiver', value);
+                          },
+                          activeColor: const Color.fromARGB(255, 12, 51, 135),
+                        ),
+                        if (showRightsOptions.value) ...[
+                          const SizedBox(height: 16),
+                          FormBuilderCheckboxGroup(
+                            name: 'rightsOptions',
+                            decoration: const InputDecoration(
+                              labelText: '保持する権利の選択',
+                            ),
+                            options: const [
+                              FormBuilderFieldOption(
+                                  value: 'expense', child: Text('費用請求権')),
+                              FormBuilderFieldOption(
+                                  value: 'reward', child: Text('報労金')),
+                              FormBuilderFieldOption(
+                                  value: 'ownership', child: Text('所有権')),
+                            ],
+                            activeColor: const Color.fromARGB(255, 12, 51, 135),
+                          ),
+                          const SizedBox(height: 16),
+                          FormBuilderRadioGroup(
+                            name: 'hasConsentToDisclose',
+                            decoration: const InputDecoration(
+                              labelText: '氏名等告知の同意',
+                            ),
+                            options: const [
+                              FormBuilderFieldOption(
+                                  value: true, child: Text('同意する')),
+                              FormBuilderFieldOption(
+                                  value: false, child: Text('同意しない')),
+                            ],
+                            onChanged: (value) =>
+                                onFieldChanged('hasConsentToDisclose', value),
+                            activeColor: const Color.fromARGB(255, 12, 51, 135),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      title: '拾得者情報',
+                      icon: Icons.person,
+                      iconColor: Colors.grey[600],
+                      children: [
+                        FormBuilderTextField(
+                          name: 'finderName',
+                          focusNode: nameNode,
+                          decoration: InputDecoration(
+                            labelText: '氏名',
+                            labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                            prefixIcon:
+                                Icon(Icons.person, color: Colors.grey[600]),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        FormBuilderTextField(
+                          name: 'finderPhone',
+                          focusNode: phoneNode,
+                          decoration: InputDecoration(
+                            labelText: '電話番号',
+                            labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                            prefixIcon:
+                                Icon(Icons.phone, color: Colors.grey[600]),
+                          ),
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 4,
+                              child: FormBuilderTextField(
+                                name: 'postalCode',
+                                focusNode: postalCodeNode,
+                                decoration: InputDecoration(
+                                  labelText: '郵便番号',
+                                  labelStyle:
+                                      GoogleFonts.notoSans(fontSize: 16),
+                                  prefixIcon: Icon(Icons.location_on,
+                                      color: Colors.grey[600]),
+                                ),
+                                validator: FormBuilderValidators.numeric(
+                                    errorText: '数字のみ入力可能です'),
+                                onChanged: (value) =>
+                                    onFieldChanged('postalCode', value),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 3,
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  final code = formKey.value.currentState
+                                      ?.fields['postalCode']?.value;
+                                  if (code != null &&
+                                      code.toString().length == 7) {
+                                    await searchAddress(code.toString());
+                                  }
+                                },
+                                icon: Icon(Icons.search,
+                                    size: 18, color: Colors.white),
+                                label: Text('住所検索',
+                                    style: GoogleFonts.notoSans(
+                                        color: Colors.white, fontSize: 15)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color.fromARGB(255, 12, 51, 135),
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12, horizontal: 16),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        FormBuilderTextField(
+                          name: 'finderAddress',
+                          focusNode: addressNode,
+                          decoration: InputDecoration(
+                            labelText: '住所',
+                            labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                            prefixIcon:
+                                Icon(Icons.home, color: Colors.grey[600]),
+                          ),
+                          onChanged: (value) =>
+                              onFieldChanged('finderAddress', value),
+                          maxLines: 2,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      title: '拾得日時',
+                      icon: Icons.event,
+                      iconColor: Colors.grey[600],
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FormBuilderDateTimePicker(
+                                name: 'foundDate',
+                                inputType: InputType.date,
+                                format: DateFormat('yyyy/MM/dd'),
+                                decoration: InputDecoration(
+                                  labelText: '拾得日 *',
+                                  labelStyle:
+                                      GoogleFonts.notoSans(fontSize: 16),
+                                  prefixIcon: Icon(Icons.calendar_today,
+                                      color: Colors.grey[600]),
+                                ),
+                                validator: FormBuilderValidators.required(
+                                    errorText: '拾得日を入力してください'),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    onFieldChanged('foundDate',
+                                        DateFormat('yyyy/MM/dd').format(value));
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: FormBuilderDateTimePicker(
+                                name: 'foundTime',
+                                inputType: InputType.time,
+                                decoration: InputDecoration(
+                                  labelText: '拾得時刻 *',
+                                  labelStyle:
+                                      GoogleFonts.notoSans(fontSize: 16),
+                                  prefixIcon: Icon(Icons.access_time,
+                                      color: Colors.grey[600]),
+                                ),
+                                validator: FormBuilderValidators.required(
+                                    errorText: '拾得時刻を入力してください'),
+                                onChanged: (value) => onFieldChanged(
+                                    'foundTime', value?.toString()),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      title: '拾得場所',
+                      icon: Icons.place,
+                      iconColor: Colors.grey[600],
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FormBuilderTextField(
+                                name: 'routeName',
+                                focusNode: routeNode,
+                                decoration: InputDecoration(
+                                  labelText: '路線',
+                                  labelStyle:
+                                      GoogleFonts.notoSans(fontSize: 16),
+                                  prefixIcon: Icon(Icons.train,
+                                      color: Colors.grey[600]),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: FormBuilderTextField(
+                                name: 'vehicleNumber',
+                                focusNode: vehicleNode,
+                                decoration: InputDecoration(
+                                  labelText: '車番',
+                                  labelStyle:
+                                      GoogleFonts.notoSans(fontSize: 16),
+                                  prefixIcon: Icon(Icons.numbers,
+                                      color: Colors.grey[600]),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        FormBuilderTextField(
+                          name: 'otherLocation',
+                          focusNode: otherLocationNode,
+                          decoration: InputDecoration(
+                            labelText: 'その他の場所',
+                            labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                            prefixIcon:
+                                Icon(Icons.place, color: Colors.grey[600]),
+                          ),
+                          onChanged: (value) =>
+                              onFieldChanged('otherLocation', value),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      title: '基本情報',
+                      icon: Icons.info_outline,
+                      iconColor: Colors.grey[600],
+                      children: [
+                        _buildCashSection(formKey.value),
+                        const SizedBox(height: 16),
+                        FormBuilderTextField(
+                          name: 'itemName',
+                          focusNode: itemNameNode,
+                          decoration: InputDecoration(
+                            labelText: '遺失物の名称 *',
+                            labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                            prefixIcon: Icon(Icons.inventory_2,
+                                color: Colors.grey[600]),
+                          ),
+                          validator: FormBuilderValidators.required(
+                              errorText: '遺失物の名称を入力してください'),
+                          onChanged: (value) =>
+                              onFieldChanged('itemName', value),
+                        ),
+                        const SizedBox(height: 16),
+                        FormBuilderTextField(
+                          name: 'itemColor',
+                          focusNode: itemColorNode,
+                          decoration: InputDecoration(
+                            labelText: '色',
+                            labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                            prefixIcon:
+                                Icon(Icons.color_lens, color: Colors.grey[600]),
+                          ),
+                          onChanged: (value) =>
+                              onFieldChanged('itemColor', value),
+                        ),
+                        const SizedBox(height: 16),
+                        FormBuilderTextField(
+                          name: 'itemDescription',
+                          focusNode: itemDescriptionNode,
+                          decoration: InputDecoration(
+                            labelText: '特徴など',
+                            labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                            prefixIcon: Icon(Icons.description,
+                                color: Colors.grey[600]),
+                          ),
+                          onChanged: (value) =>
+                              onFieldChanged('itemDescription', value),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        FormBuilderRadioGroup(
+                          name: 'needsReceipt',
+                          decoration: const InputDecoration(
+                            labelText: '預り証発行',
+                          ),
+                          options: const [
+                            FormBuilderFieldOption(
+                                value: true, child: Text('有')),
+                            FormBuilderFieldOption(
+                                value: false, child: Text('無')),
+                          ],
+                          activeColor: const Color.fromARGB(255, 12, 51, 135),
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final images = await imagePicker.pickMultiImage();
+                            if (images != null) {
+                              selectedImages.value = [
+                                ...selectedImages.value,
+                                ...images
+                              ];
+                            }
+                          },
+                          icon: Icon(Icons.photo_camera_outlined,
+                              color: const Color.fromARGB(255, 12, 51, 135)),
+                          label: Text('写真を追加',
+                              style: Theme.of(context).textTheme.bodyMedium),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
+                            side: BorderSide(color: Colors.grey[400]!),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
-      ),
-      body: FormBuilder(
-        key: formKey,
-        initialValue: initialValues,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildSectionCard(
-                  title: '権利確認',
-                  icon: Icons.gavel,
-                  iconColor: Colors.grey[600],
-                  children: [
-                    FormBuilderRadioGroup(
-                      name: 'hasRightsWaiver',
-                      decoration: InputDecoration(
-                        labelText: '権利放棄',
-                        prefixIcon: Icon(Icons.assignment_outlined,
-                            color: Colors.grey[600]),
-                      ),
-                      options: const [
-                        FormBuilderFieldOption(
-                            value: true, child: Text('一切の権利を放棄')),
-                        FormBuilderFieldOption(
-                            value: false, child: Text('権利を保持する')),
-                      ],
-                      onChanged: (value) {
-                        showRightsOptions.value = value == false;
-                        onFieldChanged('hasRightsWaiver', value);
-                      },
-                      activeColor: const Color(0xFF1a56db),
+          if (showButtons.value)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
                     ),
-                    if (showRightsOptions.value) ...[
-                      const SizedBox(height: 16),
-                      FormBuilderCheckboxGroup(
-                        name: 'rightsOptions',
-                        decoration: InputDecoration(
-                          labelText: '保持する権利の選択',
-                          prefixIcon: Icon(Icons.fact_check_outlined,
-                              color: Colors.grey[600]),
-                        ),
-                        options: const [
-                          FormBuilderFieldOption(
-                              value: 'expense', child: Text('費用請求権')),
-                          FormBuilderFieldOption(
-                              value: 'reward', child: Text('報労金')),
-                          FormBuilderFieldOption(
-                              value: 'ownership', child: Text('所有権')),
-                        ],
-                        activeColor: const Color(0xFF1a56db),
-                      ),
-                      const SizedBox(height: 16),
-                      FormBuilderRadioGroup(
-                        name: 'hasConsentToDisclose',
-                        decoration: InputDecoration(
-                          labelText: '氏名等告知の同意',
-                          prefixIcon: Icon(Icons.privacy_tip_outlined,
-                              color: Colors.grey[600]),
-                        ),
-                        options: const [
-                          FormBuilderFieldOption(
-                              value: true, child: Text('同意する')),
-                          FormBuilderFieldOption(
-                              value: false, child: Text('同意しない')),
-                        ],
-                        onChanged: (value) =>
-                            onFieldChanged('hasConsentToDisclose', value),
-                        activeColor: const Color(0xFF1a56db),
-                      ),
-                    ],
                   ],
                 ),
-                const SizedBox(height: 16),
-                _buildSectionCard(
-                  title: '拾得者情報',
-                  icon: Icons.person,
-                  iconColor: Colors.grey[600],
+                child: Row(
                   children: [
-                    FormBuilderTextField(
-                      name: 'finderName',
-                      decoration: InputDecoration(
-                        labelText: '氏名',
-                        prefixIcon: Icon(Icons.person, color: Colors.grey[600]),
-                      ),
-                      validator: FormBuilderValidators.required(
-                          errorText: '氏名を入力してください'),
-                      onChanged: (value) => onFieldChanged('finderName', value),
-                    ),
-                    const SizedBox(height: 16),
-                    FormBuilderTextField(
-                      name: 'finderPhone',
-                      decoration: InputDecoration(
-                        labelText: '電話番号',
-                        prefixIcon: Icon(Icons.phone, color: Colors.grey[600]),
-                      ),
-                      validator: FormBuilderValidators.required(
-                          errorText: '電話番号を入力してください'),
-                      onChanged: (value) =>
-                          onFieldChanged('finderPhone', value),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 4,
-                          child: FormBuilderTextField(
-                            name: 'postalCode',
-                            decoration: InputDecoration(
-                              labelText: '郵便番号',
-                              prefixIcon: Icon(Icons.location_on,
-                                  color: Colors.grey[600]),
-                            ),
-                            validator: FormBuilderValidators.compose([
-                              FormBuilderValidators.required(
-                                  errorText: '郵便番号を入力してください'),
-                              FormBuilderValidators.numeric(
-                                  errorText: '数字のみ入力可能です'),
-                              FormBuilderValidators.minLength(7,
-                                  errorText: '7桁の数字を入力してください'),
-                              FormBuilderValidators.maxLength(7,
-                                  errorText: '7桁の数字を入力してください'),
-                            ]),
-                            onChanged: (value) =>
-                                onFieldChanged('postalCode', value),
-                            keyboardType: TextInputType.number,
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          if (formKey.value.currentState?.saveAndValidate() ??
+                              false) {
+                            await ref
+                                .read(draftListProvider.notifier)
+                                .saveDraft(formKey.value.currentState!.value,
+                                    draftId: draftId);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('下書きを保存しました')));
+                              Navigator.pop(context);
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.save_outlined,
+                            size: 24, color: Colors.white),
+                        label: Text(
+                          '下書き保存',
+                          style: GoogleFonts.notoSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 3,
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              final code = formKey
-                                  .currentState?.fields['postalCode']?.value;
-                              if (code != null && code.toString().length == 7) {
-                                await searchAddress(code.toString());
-                              }
-                            },
-                            icon: Icon(Icons.search,
-                                size: 18, color: Colors.white),
-                            label: Text('住所検索',
-                                style: GoogleFonts.notoSans(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                )),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1a56db),
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 223, 170, 36),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          if (formKey.value.currentState?.saveAndValidate() ??
+                              false) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LostItemConfirmScreen(
+                                  formData: formKey.value.currentState!.value,
+                                ),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.check_circle_outline,
+                            size: 24, color: Colors.white),
+                        label: Text(
+                          '確認',
+                          style: GoogleFonts.notoSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    FormBuilderTextField(
-                      name: 'finderAddress',
-                      decoration: InputDecoration(
-                        labelText: '住所',
-                        prefixIcon: Icon(Icons.home, color: Colors.grey[600]),
-                      ),
-                      validator: FormBuilderValidators.required(
-                          errorText: '住所を入力してください'),
-                      onChanged: (value) =>
-                          onFieldChanged('finderAddress', value),
-                      maxLines: 2,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildSectionCard(
-                  title: '拾得日時',
-                  icon: Icons.event,
-                  iconColor: Colors.grey[600],
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FormBuilderDateTimePicker(
-                            name: 'foundDate',
-                            initialValue: DateTime.now(),
-                            initialEntryMode: DatePickerEntryMode.calendar,
-                            inputType: InputType.date,
-                            format: DateFormat('yyyy/MM/dd'),
-                            decoration: InputDecoration(
-                              labelText: '拾得日',
-                              prefixIcon: Icon(Icons.calendar_today,
-                                  color: Colors.grey[600]),
-                            ),
-                            onChanged: (value) {
-                              if (value != null) {
-                                onFieldChanged('foundDate',
-                                    DateFormat('yyyy/MM/dd').format(value));
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: FormBuilderDateTimePicker(
-                            name: 'foundTime',
-                            initialValue: DateTime.now(),
-                            decoration: InputDecoration(
-                              labelText: '拾得時刻',
-                              prefixIcon: Icon(Icons.access_time,
-                                  color: Colors.grey[600]),
-                            ),
-                            inputType: InputType.time,
-                            format: DateFormat('HH:mm'),
-                            onChanged: (value) =>
-                                onFieldChanged('foundTime', value?.toString()),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildSectionCard(
-                  title: '拾得場所',
-                  icon: Icons.place,
-                  iconColor: Colors.grey[600],
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FormBuilderTextField(
-                            name: 'routeName',
-                            decoration: InputDecoration(
-                              labelText: '路線',
-                              prefixIcon:
-                                  Icon(Icons.train, color: Colors.grey[600]),
-                            ),
-                            validator: FormBuilderValidators.required(
-                                errorText: '路線名を入力してください'),
-                            onChanged: (value) =>
-                                onFieldChanged('routeName', value),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: FormBuilderTextField(
-                            name: 'vehicleNumber',
-                            decoration: InputDecoration(
-                              labelText: '車番',
-                              prefixIcon:
-                                  Icon(Icons.numbers, color: Colors.grey[600]),
-                            ),
-                            validator: FormBuilderValidators.required(
-                                errorText: '車番を入力してください'),
-                            onChanged: (value) =>
-                                onFieldChanged('vehicleNumber', value),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    FormBuilderTextField(
-                      name: 'otherLocation',
-                      decoration: InputDecoration(
-                        labelText: 'その他の場所',
-                        prefixIcon: Icon(Icons.place, color: Colors.grey[600]),
-                      ),
-                      onChanged: (value) =>
-                          onFieldChanged('otherLocation', value),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildSectionCard(
-                  title: '基本情報',
-                  icon: Icons.info_outline,
-                  iconColor: Colors.grey[600],
-                  children: [
-                    _buildCashSection(formKey),
-                    const SizedBox(height: 16),
-                    FormBuilderTextField(
-                      name: 'itemName',
-                      decoration: InputDecoration(
-                        labelText: '遺失物の名称',
-                        prefixIcon:
-                            Icon(Icons.inventory_2, color: Colors.grey[600]),
-                      ),
-                      validator: FormBuilderValidators.required(
-                          errorText: '品名を入力してください'),
-                      onChanged: (value) => onFieldChanged('itemName', value),
-                    ),
-                    const SizedBox(height: 16),
-                    FormBuilderTextField(
-                      name: 'itemColor',
-                      decoration: InputDecoration(
-                        labelText: '色',
-                        prefixIcon:
-                            Icon(Icons.color_lens, color: Colors.grey[600]),
-                      ),
-                      onChanged: (value) => onFieldChanged('itemColor', value),
-                    ),
-                    const SizedBox(height: 16),
-                    FormBuilderTextField(
-                      name: 'itemDescription',
-                      decoration: InputDecoration(
-                        labelText: '遺失物の特徴',
-                        prefixIcon: Icon(Icons.description_outlined,
-                            color: Colors.grey[600]),
-                      ),
-                      validator: FormBuilderValidators.required(
-                          errorText: '品種・形状、特徴・内容を入力してください'),
-                      onChanged: (value) =>
-                          onFieldChanged('itemDescription', value),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
-                    FormBuilderCheckbox(
-                      name: 'needsReceipt',
-                      title: Text(
-                        '預り証発行有り',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                        border: InputBorder.none,
-                      ),
-                      activeColor: const Color(0xFF1a56db),
-                    ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final images = await imagePicker.pickMultiImage();
-                        if (images != null) {
-                          selectedImages.value = [
-                            ...selectedImages.value,
-                            ...images
-                          ];
-                        }
-                      },
-                      icon: Icon(Icons.photo_camera_outlined,
-                          color: const Color(0xFF1a56db)),
-                      label: Text(
-                        '写真を追加',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 16,
-                        ),
-                        side: BorderSide(color: Colors.grey[400]!),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 12, 51, 135),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (formKey.currentState?.saveAndValidate() ?? false) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => LostItemConfirmScreen(
-                              formData: formKey.currentState!.value,
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: Text(
-                      '確認',
-                      style: GoogleFonts.notoSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1a56db),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -560,10 +728,9 @@ class LostItemFormScreen extends HookConsumerWidget {
                 Text(
                   title,
                   style: GoogleFonts.notoSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800]),
                 ),
               ],
             ),
@@ -587,20 +754,18 @@ class LostItemFormScreen extends HookConsumerWidget {
               name: name,
               decoration: InputDecoration(
                 labelText: label,
+                labelStyle: GoogleFonts.notoSans(fontSize: 16),
                 filled: true,
                 fillColor: Colors.white,
                 suffixText: '枚',
                 border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                ),
+                    borderRadius: BorderRadius.all(Radius.circular(8))),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    borderSide: BorderSide(color: Colors.grey[300]!)),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                  borderSide: const BorderSide(color: Color(0xFF1a56db)),
-                ),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    borderSide: const BorderSide(color: Color(0xFF1a56db))),
               ),
               keyboardType: TextInputType.number,
               onChanged: onChanged,
@@ -612,13 +777,11 @@ class LostItemFormScreen extends HookConsumerWidget {
             flex: 1,
             child: Builder(
               builder: (context) {
-                final count = int.tryParse(
-                      FormBuilder.of(context)
-                              ?.fields[name]
-                              ?.value
-                              ?.toString() ??
-                          '0',
-                    ) ??
+                final count = int.tryParse(FormBuilder.of(context)
+                            ?.fields[name]
+                            ?.value
+                            ?.toString() ??
+                        '0') ??
                     0;
                 final amount = count * value;
                 return Container(
@@ -698,10 +861,9 @@ class LostItemFormScreen extends HookConsumerWidget {
             Text(
               '現金',
               style: GoogleFonts.notoSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87),
             ),
             const Spacer(),
             if (totalAmount.value > 0)
@@ -715,9 +877,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                 child: Text(
                   '¥${NumberFormat('#,###').format(totalAmount.value)}',
                   style: GoogleFonts.notoSans(
-                    color: const Color(0xFF1a56db),
-                    fontWeight: FontWeight.bold,
-                  ),
+                      color: const Color(0xFF1a56db),
+                      fontWeight: FontWeight.bold),
                 ),
               ),
           ],
@@ -767,17 +928,14 @@ class LostItemFormScreen extends HookConsumerWidget {
                   Text(
                     '合計金額',
                     style: GoogleFonts.notoSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     '¥${NumberFormat('#,###').format(totalAmount.value)}',
                     style: GoogleFonts.notoSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1a56db),
-                    ),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1a56db)),
                   ),
                 ],
               ),
