@@ -1,19 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:expandable/expandable.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'lost_item_confirm_screen.dart';
 
 class LostItemFormScreen extends HookConsumerWidget {
-  LostItemFormScreen({super.key});
+  const LostItemFormScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,16 +53,13 @@ class LostItemFormScreen extends HookConsumerWidget {
 
     final filledFields = useState<Set<String>>({});
 
-    // フィールド更新時の処理
     void onFieldChanged(String fieldName, dynamic value) {
-      // フィールドの状態を更新
       if (value != null && value.toString().isNotEmpty) {
         filledFields.value = {...filledFields.value, fieldName};
       } else {
         filledFields.value = {...filledFields.value}..remove(fieldName);
       }
 
-      // 特定のフィールドの追加処理
       if (fieldName == 'hasRightsWaiver') {
         showRightsOptions.value = value == false;
       }
@@ -102,8 +98,36 @@ class LostItemFormScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('遺失物連絡票'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          '遺失物連絡票',
+          style: GoogleFonts.notoSans(
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
         centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                // TODO: 下書き保存の処理
+              },
+              icon: Icon(Icons.save_outlined,
+                  size: 18, color: const Color(0xFF1a56db)),
+              label: Text('下書き保存',
+                  style: TextStyle(color: const Color(0xFF1a56db))),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF1a56db)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: FormBuilder(
         key: formKey,
@@ -122,6 +146,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                       name: 'hasRightsWaiver',
                       decoration: InputDecoration(
                         labelText: '権利放棄',
+                        prefixIcon: Icon(Icons.assignment_outlined,
+                            color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -134,7 +160,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -147,9 +174,11 @@ class LostItemFormScreen extends HookConsumerWidget {
                         FormBuilderFieldOption(
                             value: false, child: Text('権利を保持する')),
                       ],
-                      onChanged: (value) =>
-                          onFieldChanged('hasRightsWaiver', value),
-                      activeColor: Colors.blue[700],
+                      onChanged: (value) {
+                        showRightsOptions.value = value == false;
+                        onFieldChanged('hasRightsWaiver', value);
+                      },
+                      activeColor: const Color(0xFF1a56db),
                     ),
                     if (showRightsOptions.value) ...[
                       const SizedBox(height: 16),
@@ -157,6 +186,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         name: 'rightsOptions',
                         decoration: InputDecoration(
                           labelText: '保持する権利の選択',
+                          prefixIcon: Icon(Icons.fact_check_outlined,
+                              color: Colors.grey[600]),
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
@@ -169,7 +200,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: Colors.blue[700]!),
+                            borderSide:
+                                BorderSide(color: const Color(0xFF1a56db)),
                           ),
                           errorBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -184,7 +216,44 @@ class LostItemFormScreen extends HookConsumerWidget {
                           FormBuilderFieldOption(
                               value: 'ownership', child: Text('所有権')),
                         ],
-                        activeColor: Colors.blue[700],
+                        activeColor: const Color(0xFF1a56db),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderRadioGroup(
+                        name: 'hasConsentToDisclose',
+                        decoration: InputDecoration(
+                          labelText: '氏名等告知の同意',
+                          prefixIcon: Icon(Icons.privacy_tip_outlined,
+                              color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide:
+                                BorderSide(color: const Color(0xFF1a56db)),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderSide: BorderSide(color: Colors.red[300]!),
+                          ),
+                        ),
+                        options: const [
+                          FormBuilderFieldOption(
+                              value: true, child: Text('同意する')),
+                          FormBuilderFieldOption(
+                              value: false, child: Text('同意しない')),
+                        ],
+                        onChanged: (value) =>
+                            onFieldChanged('hasConsentToDisclose', value),
+                        activeColor: const Color(0xFF1a56db),
                       ),
                     ],
                   ],
@@ -199,6 +268,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                       name: 'finderName',
                       decoration: InputDecoration(
                         labelText: '氏名',
+                        prefixIcon:
+                            Icon(Icons.person_outline, color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -211,7 +282,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -225,6 +297,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                       name: 'finderPhone',
                       decoration: InputDecoration(
                         labelText: '電話番号',
+                        prefixIcon: Icon(Icons.phone, color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -237,7 +310,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -257,6 +331,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                             name: 'postalCode',
                             decoration: InputDecoration(
                               labelText: '郵便番号',
+                              prefixIcon: Icon(Icons.mail_outline,
+                                  color: Colors.grey[600]),
                               filled: true,
                               fillColor: Colors.white,
                               border: OutlineInputBorder(
@@ -275,7 +351,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                                 borderRadius:
                                     BorderRadius.all(Radius.circular(8)),
                                 borderSide:
-                                    BorderSide(color: Colors.blue[700]!),
+                                    BorderSide(color: const Color(0xFF1a56db)),
                               ),
                               errorBorder: OutlineInputBorder(
                                 borderRadius:
@@ -291,7 +367,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           flex: 3,
-                          child: ElevatedButton.icon(
+                          child: OutlinedButton.icon(
                             onPressed: () async {
                               final code = formKey
                                   .currentState?.fields['postalCode']?.value;
@@ -299,12 +375,17 @@ class LostItemFormScreen extends HookConsumerWidget {
                                 await searchAddress(code.toString());
                               }
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue[700],
-                              foregroundColor: Colors.white,
+                            icon: Icon(Icons.search,
+                                size: 18, color: const Color(0xFF1a56db)),
+                            label: Text('住所検索',
+                                style:
+                                    TextStyle(color: const Color(0xFF1a56db))),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF1a56db)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            icon: const Icon(Icons.search, color: Colors.white),
-                            label: const Text('住所検索'),
                           ),
                         ),
                       ],
@@ -314,6 +395,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                       name: 'finderAddress',
                       decoration: InputDecoration(
                         labelText: '住所',
+                        prefixIcon:
+                            Icon(Icons.home_outlined, color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -326,7 +409,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -341,8 +425,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 _buildSectionCard(
-                  title: '拾得場所・日時',
-                  icon: Icons.location_on,
+                  title: '拾得日時',
+                  icon: Icons.event,
                   iconColor: Colors.grey[600],
                   children: [
                     Row(
@@ -356,6 +440,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                             format: DateFormat('yyyy/MM/dd'),
                             decoration: InputDecoration(
                               labelText: '拾得日',
+                              prefixIcon: Icon(Icons.calendar_today,
+                                  color: Colors.grey[600]),
                               filled: true,
                               fillColor: Colors.white,
                               border: OutlineInputBorder(
@@ -374,7 +460,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                                 borderRadius:
                                     BorderRadius.all(Radius.circular(8)),
                                 borderSide:
-                                    BorderSide(color: Colors.blue[700]!),
+                                    BorderSide(color: const Color(0xFF1a56db)),
                               ),
                               errorBorder: OutlineInputBorder(
                                 borderRadius:
@@ -397,6 +483,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                             initialValue: DateTime.now(),
                             decoration: InputDecoration(
                               labelText: '拾得時刻',
+                              prefixIcon: Icon(Icons.access_time,
+                                  color: Colors.grey[600]),
                               filled: true,
                               fillColor: Colors.white,
                               border: OutlineInputBorder(
@@ -415,7 +503,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                                 borderRadius:
                                     BorderRadius.all(Radius.circular(8)),
                                 borderSide:
-                                    BorderSide(color: Colors.blue[700]!),
+                                    BorderSide(color: const Color(0xFF1a56db)),
                               ),
                               errorBorder: OutlineInputBorder(
                                 borderRadius:
@@ -431,64 +519,100 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    FormBuilderTextField(
-                      name: 'routeName',
-                      decoration: InputDecoration(
-                        labelText: '路線名',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildSectionCard(
+                  title: '拾得場所',
+                  icon: Icons.place,
+                  iconColor: Colors.grey[600],
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FormBuilderTextField(
+                            name: 'routeName',
+                            decoration: InputDecoration(
+                              labelText: '路線名',
+                              prefixIcon:
+                                  Icon(Icons.train, color: Colors.grey[600]),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide:
+                                    BorderSide(color: Colors.grey[300]!),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide:
+                                    BorderSide(color: Colors.grey[300]!),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide:
+                                    BorderSide(color: const Color(0xFF1a56db)),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide: BorderSide(color: Colors.red[300]!),
+                              ),
+                            ),
+                            onChanged: (value) =>
+                                onFieldChanged('routeName', value),
+                          ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: FormBuilderTextField(
+                            name: 'vehicleNumber',
+                            decoration: InputDecoration(
+                              labelText: '車番',
+                              prefixIcon: Icon(Icons.directions_subway,
+                                  color: Colors.grey[600]),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide:
+                                    BorderSide(color: Colors.grey[300]!),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide:
+                                    BorderSide(color: Colors.grey[300]!),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide:
+                                    BorderSide(color: const Color(0xFF1a56db)),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(8)),
+                                borderSide: BorderSide(color: Colors.red[300]!),
+                              ),
+                            ),
+                            onChanged: (value) =>
+                                onFieldChanged('vehicleNumber', value),
+                          ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.red[300]!),
-                        ),
-                      ),
-                      onChanged: (value) => onFieldChanged('routeName', value),
-                    ),
-                    const SizedBox(height: 16),
-                    FormBuilderTextField(
-                      name: 'vehicleNumber',
-                      decoration: InputDecoration(
-                        labelText: '車番',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.red[300]!),
-                        ),
-                      ),
-                      onChanged: (value) =>
-                          onFieldChanged('vehicleNumber', value),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     FormBuilderTextField(
                       name: 'otherLocation',
                       decoration: InputDecoration(
                         labelText: 'その他',
+                        prefixIcon: Icon(Icons.location_on_outlined,
+                            color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -501,7 +625,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -525,6 +650,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                       name: 'itemName',
                       decoration: InputDecoration(
                         labelText: '品名',
+                        prefixIcon: Icon(Icons.inventory_2_outlined,
+                            color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -537,7 +664,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -551,6 +679,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                       name: 'itemColor',
                       decoration: InputDecoration(
                         labelText: '色',
+                        prefixIcon: Icon(Icons.color_lens_outlined,
+                            color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -563,7 +693,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -577,6 +708,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                       name: 'itemDescription',
                       decoration: InputDecoration(
                         labelText: '品種・形状、特徴・内容',
+                        prefixIcon: Icon(Icons.description_outlined,
+                            color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -589,7 +722,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -605,6 +739,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                       name: 'needsReceipt',
                       title: const Text('預り証発行有り'),
                       decoration: InputDecoration(
+                        prefixIcon: Icon(Icons.receipt_outlined,
+                            color: Colors.grey[600]),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -617,43 +753,39 @@ class LostItemFormScreen extends HookConsumerWidget {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.blue[700]!),
+                          borderSide:
+                              BorderSide(color: const Color(0xFF1a56db)),
                         ),
-                        disabledBorder: OutlineInputBorder(
+                        errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(color: Colors.red[300]!),
                         ),
                       ),
-                      activeColor: Colors.blue[700],
+                      activeColor: const Color(0xFF1a56db),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              final images = await imagePicker.pickMultiImage();
-                              if (images != null) {
-                                selectedImages.value = [
-                                  ...selectedImages.value,
-                                  ...images
-                                ];
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black87,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: BorderSide(color: Colors.grey[300]!),
-                              ),
-                            ),
-                            icon: const Icon(Icons.photo_camera_outlined),
-                            label: const Text('写真を追加'),
-                          ),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final images = await imagePicker.pickMultiImage();
+                        if (images != null) {
+                          selectedImages.value = [
+                            ...selectedImages.value,
+                            ...images
+                          ];
+                        }
+                      },
+                      icon: Icon(Icons.photo_camera_outlined,
+                          color: const Color(0xFF1a56db)),
+                      label: const Text('写真を追加'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1a56db),
+                        side: const BorderSide(color: Color(0xFF1a56db)),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -683,7 +815,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
+                      backgroundColor: const Color(0xFF1a56db),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -703,8 +835,8 @@ class LostItemFormScreen extends HookConsumerWidget {
   Widget _buildSectionCard({
     required String title,
     required IconData icon,
-    required List<Widget> children,
     Color? iconColor,
+    required List<Widget> children,
   }) {
     return Card(
       elevation: 0,
@@ -720,14 +852,14 @@ class LostItemFormScreen extends HookConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: iconColor ?? Colors.grey[600], size: 20),
+                Icon(icon, size: 20, color: iconColor ?? Colors.grey[600]),
                 const SizedBox(width: 8),
                 Text(
                   title,
                   style: GoogleFonts.notoSans(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Colors.grey[800],
                   ),
                 ),
               ],
@@ -764,7 +896,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
-                  borderSide: BorderSide(color: Colors.blue[700]!),
+                  borderSide: const BorderSide(color: Color(0xFF1a56db)),
                 ),
               ),
               keyboardType: TextInputType.number,
@@ -796,7 +928,9 @@ class LostItemFormScreen extends HookConsumerWidget {
                     '¥${NumberFormat('#,###').format(amount)}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.notoSans(
-                      color: amount > 0 ? Colors.blue[700] : Colors.grey[600],
+                      color: amount > 0
+                          ? const Color(0xFF1a56db)
+                          : Colors.grey[600],
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -878,7 +1012,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                 child: Text(
                   '¥${NumberFormat('#,###').format(totalAmount.value)}',
                   style: GoogleFonts.notoSans(
-                    color: Colors.blue[700],
+                    color: const Color(0xFF1a56db),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -939,7 +1073,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                     style: GoogleFonts.notoSans(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue[700],
+                      color: const Color(0xFF1a56db),
                     ),
                   ),
                 ],
