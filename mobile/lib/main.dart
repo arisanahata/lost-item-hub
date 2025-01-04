@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'features/lost_item/presentation/screens/home_screen.dart';
+import 'features/lost_item/domain/models/draft_item.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive
+  await Hive.initFlutter();
+
+  // Register adapter only if not already registered
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(DraftItemAdapter());
+  }
+
   runApp(const ProviderScope(child: MyApp()));
 }
 

@@ -1,10 +1,23 @@
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'draft_item.g.dart';
 
 @immutable
+@HiveType(typeId: 0)
+@JsonSerializable()
 class DraftItem {
+  @HiveField(0)
   final String id;
+
+  @HiveField(1)
   final Map<String, dynamic> formData;
+
+  @HiveField(2)
   final DateTime createdAt;
+
+  @HiveField(3)
   final DateTime updatedAt;
 
   const DraftItem({
@@ -28,21 +41,8 @@ class DraftItem {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'formData': formData,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-    };
-  }
+  factory DraftItem.fromJson(Map<String, dynamic> json) =>
+      _$DraftItemFromJson(json);
 
-  factory DraftItem.fromJson(Map<String, dynamic> json) {
-    return DraftItem(
-      id: json['id'] as String,
-      formData: json['formData'] as Map<String, dynamic>,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-    );
-  }
+  Map<String, dynamic> toJson() => _$DraftItemToJson(this);
 }
