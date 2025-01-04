@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../providers/draft_provider.dart';
 import 'lost_item_form_screen.dart';
+import 'lost_item_edit_screen.dart';
 
 class HomeScreen extends HookConsumerWidget {
   const HomeScreen({super.key});
@@ -12,7 +14,7 @@ class HomeScreen extends HookConsumerWidget {
     final drafts = ref.watch(draftListProvider);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF5F5F5), // フォーム画面と同じ背景色
       appBar: AppBar(
         title: const Text(
           '忘れ物登録アプリ',
@@ -36,7 +38,7 @@ class HomeScreen extends HookConsumerWidget {
                   const SizedBox(height: 16),
                   Text(
                     '下書きはありません',
-                    style: TextStyle(
+                    style: GoogleFonts.notoSans(
                       fontSize: 16,
                       color: Colors.grey[600],
                     ),
@@ -46,103 +48,297 @@ class HomeScreen extends HookConsumerWidget {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final draft = items[index];
-              final formattedDate =
-                  DateFormat('yyyy/MM/dd HH:mm').format(draft.updatedAt);
-
-              return Dismissible(
-                key: Key(draft.id),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 24),
-                  child: Icon(
-                    Icons.delete_outline,
-                    color: Colors.red[700],
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  '下書き一覧',
+                  style: GoogleFonts.notoSans(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                onDismissed: (_) {
-                  ref.read(draftListProvider.notifier).deleteDraft(draft.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('下書きを削除しました'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-                child: Card(
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey[200]!),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              LostItemFormScreen(draftId: draft.id),
-                        ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.edit_note,
-                                size: 20,
-                                color: Colors.grey[600],
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    final formData = item.formData;
+                    final itemName = formData['itemName'] as String? ?? '';
+                    final foundDateStr = formData['foundDate'] as String?;
+                    final foundTime = formData['foundTime'] as String?;
+                    final foundLocation =
+                        formData['foundLocation'] as String? ?? '';
+                    final routeName = formData['routeName'] as String? ?? '';
+                    final vehicleNumber =
+                        formData['vehicleNumber'] as String? ?? '';
+                    final itemFeatures = formData['features'] as String? ?? '';
+
+                    String dateDisplay = '';
+                    if (foundDateStr != null) {
+                      try {
+                        final date = DateTime.parse(foundDateStr);
+                        dateDisplay = DateFormat('yyyy/MM/dd').format(date);
+                        if (foundTime != null && foundTime.isNotEmpty) {
+                          dateDisplay += ' $foundTime';
+                        }
+                      } catch (e) {
+                        print('Error parsing date: $e');
+                      }
+                    }
+
+                    // 拾得場所のテキストを構築
+                    List<String> locationParts = [];
+                    if (foundLocation.isNotEmpty)
+                      locationParts.add(foundLocation);
+                    if (routeName.isNotEmpty) locationParts.add(routeName);
+                    if (vehicleNumber.isNotEmpty)
+                      locationParts.add(vehicleNumber);
+                    final locationText = locationParts.join(' ');
+
+                    return Dismissible(
+                      key: Key(item.id),
+                      direction: DismissDirection.endToStart,
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text(
+                              '下書きの削除',
+                              style: GoogleFonts.notoSans(
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
+                            ),
+                            content: Text(
+                              'この下書きを削除してもよろしいですか？',
+                              style: GoogleFonts.notoSans(),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
                                 child: Text(
-                                  draft.formData['finderName']?.toString() ??
-                                      '名前なし',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                  'キャンセル',
+                                  style: GoogleFonts.notoSans(),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: Text(
+                                  '削除',
+                                  style: GoogleFonts.notoSans(
+                                    color: Colors.red,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '最終更新: $formattedDate',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
+                        );
+                      },
+                      onDismissed: (_) {
+                        ref
+                            .read(draftListProvider.notifier)
+                            .deleteDraft(item.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('下書きを削除しました'),
+                            behavior: SnackBarBehavior.floating,
                           ),
-                        ],
+                        );
+                      },
+                      background: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.red[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 24),
+                        child: Icon(
+                          Icons.delete_outline,
+                          color: Colors.red[700],
+                        ),
                       ),
-                    ),
-                  ),
+                      child: Card(
+                        color: Colors.white,
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LostItemEditScreen(
+                                  draftId: item.id,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Stack(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.inventory_2,
+                                          size: 20,
+                                          color: Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '遺失物の名称:',
+                                          style: GoogleFonts.notoSans(
+                                            fontSize: 14,
+                                            color: Colors.grey[600],
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            itemName.isEmpty ? '-' : itemName,
+                                            style: GoogleFonts.notoSans(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey[800],
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.chevron_right,
+                                          color: Colors.grey[400],
+                                          size: 24,
+                                        ),
+                                      ],
+                                    ),
+                                    if (dateDisplay.isNotEmpty ||
+                                        locationText.isNotEmpty ||
+                                        itemFeatures.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      if (dateDisplay.isNotEmpty)
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.event,
+                                              size: 16,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              '拾得日時:',
+                                              style: GoogleFonts.notoSans(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                dateDisplay,
+                                                style: GoogleFonts.notoSans(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[700],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      if (locationText.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_on,
+                                              size: 16,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              '拾得場所:',
+                                              style: GoogleFonts.notoSans(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                locationText,
+                                                style: GoogleFonts.notoSans(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[700],
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      if (itemFeatures.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.format_list_bulleted,
+                                              size: 16,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              '特徴:',
+                                              style: GoogleFonts.notoSans(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                itemFeatures,
+                                                style: GoogleFonts.notoSans(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[700],
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stack) => Center(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
           child: Text('エラーが発生しました: $error'),
         ),
       ),
@@ -155,9 +351,9 @@ class HomeScreen extends HookConsumerWidget {
                   const LostItemFormScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                const begin = Offset(0.0, 1.0);
+                const begin = Offset(1.0, 0.0);
                 const end = Offset.zero;
-                const curve = Curves.easeOutQuart;
+                const curve = Curves.easeInOut;
                 var tween = Tween(begin: begin, end: end).chain(
                   CurveTween(curve: curve),
                 );
@@ -166,12 +362,12 @@ class HomeScreen extends HookConsumerWidget {
                   child: child,
                 );
               },
-              transitionDuration: const Duration(milliseconds: 500),
-              reverseTransitionDuration: const Duration(milliseconds: 500),
+              transitionDuration: const Duration(milliseconds: 300),
+              reverseTransitionDuration: const Duration(milliseconds: 300),
             ),
           );
         },
-        backgroundColor: const Color(0xFF1a56db),
+        backgroundColor: const Color.fromARGB(255, 12, 51, 135),
         elevation: 0,
         label: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -180,7 +376,7 @@ class HomeScreen extends HookConsumerWidget {
               const Icon(
                 Icons.add,
                 size: 28,
-                color: Colors.white,  // アイコンの色を白に設定
+                color: Colors.white,
               ),
               const SizedBox(width: 12),
               Text(

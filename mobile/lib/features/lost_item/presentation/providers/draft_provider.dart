@@ -25,9 +25,10 @@ class DraftNotifier extends AsyncNotifier<List<DraftItem>> {
       return [];
     }
     final draftsJson = _prefs.getStringList(_draftKey) ?? [];
-    return draftsJson
-        .map((json) => DraftItem.fromJson(jsonDecode(json)))
-        .toList()
+    return draftsJson.map((json) {
+      final Map<String, dynamic> data = jsonDecode(json);
+      return DraftItem.fromJson(data);
+    }).toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
@@ -35,9 +36,14 @@ class DraftNotifier extends AsyncNotifier<List<DraftItem>> {
     try {
       final draftsJson = drafts.map((draft) {
         final Map<String, dynamic> draftMap = draft.toJson();
-        // フォームデータからDateTimeオブジェクトを除外
+        // DateTimeをISOString形式で保存
         final Map<String, dynamic> cleanFormData = Map.from(draft.formData)
-          ..removeWhere((key, value) => value is DateTime);
+          ..updateAll((key, value) {
+            if (value is DateTime) {
+              return value.toIso8601String();
+            }
+            return value;
+          });
         draftMap['formData'] = cleanFormData;
         return jsonEncode(draftMap);
       }).toList();
@@ -54,9 +60,14 @@ class DraftNotifier extends AsyncNotifier<List<DraftItem>> {
       final now = DateTime.now();
       final drafts = await _loadDrafts();
 
-      // フォームデータからDateTimeオブジェクトを除外
+      // DateTimeをString形式に変換
       final Map<String, dynamic> cleanFormData = Map.from(formData)
-        ..removeWhere((key, value) => value is DateTime);
+        ..updateAll((key, value) {
+          if (value is DateTime) {
+            return value.toIso8601String();
+          }
+          return value;
+        });
 
       if (draftId != null) {
         final index = drafts.indexWhere((draft) => draft.id == draftId);
@@ -95,6 +106,11 @@ class DraftNotifier extends AsyncNotifier<List<DraftItem>> {
 
   Future<DraftItem?> getDraft(String id) async {
     final drafts = await _loadDrafts();
-    return drafts.firstWhere((draft) => draft.id == id);
+    try {
+      final draft = drafts.firstWhere((draft) => draft.id == id);
+      return draft;
+    } catch (e) {
+      return null;
+    }
   }
 }
