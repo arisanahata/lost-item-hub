@@ -7,16 +7,19 @@ import 'features/lost_item/domain/models/draft_item.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Hive
   await Hive.initFlutter();
-
+  await Hive.openBox('cash');
+  
   // Register adapter only if not already registered
   if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(DraftItemAdapter());
   }
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
