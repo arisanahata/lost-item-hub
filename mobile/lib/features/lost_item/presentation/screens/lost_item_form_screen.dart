@@ -15,14 +15,16 @@ import 'home_screen.dart';
 import 'lost_item_confirm_screen.dart';
 
 class LostItemFormScreen extends HookConsumerWidget {
-  final String? draftId;
   final bool isEditing;
+  final String? draftId;
+  final Map<String, dynamic>? initialFormData;
 
   const LostItemFormScreen({
-    super.key,
-    this.draftId,
+    Key? key,
     this.isEditing = false,
-  });
+    this.draftId,
+    this.initialFormData,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,7 +60,50 @@ class LostItemFormScreen extends HookConsumerWidget {
       };
     }, const []);
 
-    final cashController = useTextEditingController(text: '0');
+    // TextEditingControllerをuseEffectで管理
+    final controllers = useState<Map<String, TextEditingController>>({});
+
+    useEffect(() {
+      // 各金額入力用のcontrollerを初期化
+      final newControllers = {
+        'yen10000': TextEditingController(text: initialFormData?['yen10000']?.toString() ?? ''),
+        'yen5000': TextEditingController(text: initialFormData?['yen5000']?.toString() ?? ''),
+        'yen2000': TextEditingController(text: initialFormData?['yen2000']?.toString() ?? ''),
+        'yen1000': TextEditingController(text: initialFormData?['yen1000']?.toString() ?? ''),
+        'yen500': TextEditingController(text: initialFormData?['yen500']?.toString() ?? ''),
+        'yen100': TextEditingController(text: initialFormData?['yen100']?.toString() ?? ''),
+        'yen50': TextEditingController(text: initialFormData?['yen50']?.toString() ?? ''),
+        'yen10': TextEditingController(text: initialFormData?['yen10']?.toString() ?? ''),
+        'yen5': TextEditingController(text: initialFormData?['yen5']?.toString() ?? ''),
+        'yen1': TextEditingController(text: initialFormData?['yen1']?.toString() ?? ''),
+      };
+      controllers.value = newControllers;
+
+      return () {
+        // controllersの破棄
+        for (final controller in controllers.value.values) {
+          controller.dispose();
+        }
+      };
+    }, []);
+
+    // 初期値の設定
+    useEffect(() {
+      if (isEditing && initialFormData != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          formKey.value.currentState?.patchValue({
+            'hasRightsWaiver': initialFormData!['hasRightsWaiver'] ?? true,
+            'hasConsentToDisclose': initialFormData!['hasConsentToDisclose'] ?? true,
+            'rightsOptions': initialFormData!['rightsOptions'] ?? [],
+            'needsReceipt': initialFormData!['needsReceipt'] ?? false,
+            'foundDate': initialFormData!['foundDate'],
+            'foundTime': initialFormData!['foundTime'],
+            ...initialFormData!,
+          });
+        });
+      }
+      return null;
+    }, [initialFormData]);
 
     // フォームの値が変更されたときの処理
     void onFieldChanged(String fieldName, dynamic value) {
@@ -77,9 +122,9 @@ class LostItemFormScreen extends HookConsumerWidget {
     // 現金入力の制御
     void handleCashInput(String? value) {
       if (value == null || value.isEmpty) {
-        cashController.text = '0';
-        cashController.selection = TextSelection.fromPosition(
-          TextPosition(offset: cashController.text.length),
+        controllers.value['cash']!.text = '0';
+        controllers.value['cash']!.selection = TextSelection.fromPosition(
+          TextPosition(offset: controllers.value['cash']!.text.length),
         );
         onFieldChanged('cash', '0');
         return;
@@ -93,8 +138,8 @@ class LostItemFormScreen extends HookConsumerWidget {
         newValue = newValue.substring(1);
       }
 
-      cashController.text = newValue;
-      cashController.selection = TextSelection.fromPosition(
+      controllers.value['cash']!.text = newValue;
+      controllers.value['cash']!.selection = TextSelection.fromPosition(
         TextPosition(offset: newValue.length),
       );
 
@@ -171,13 +216,15 @@ class LostItemFormScreen extends HookConsumerWidget {
                   border: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(8))),
                   enabledBorder: OutlineInputBorder(
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
+                      borderRadius:
+                          const BorderRadius.all(Radius.circular(8)),
                       borderSide: BorderSide(color: Colors.grey[300]!)),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                      borderSide: const BorderSide(color: Color(0xFF1a56db))),
+                  focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: Color(0xFF1a56db))),
                 ),
                 keyboardType: TextInputType.number,
+                controller: controllers.value[name],
                 onChanged: onChanged,
                 valueTransformer: (value) => int.tryParse(value ?? '0') ?? 0,
               ),
@@ -342,7 +389,9 @@ class LostItemFormScreen extends HookConsumerWidget {
                   name: 'foundDate',
                   inputType: InputType.date,
                   format: DateFormat('yyyy/MM/dd'),
-                  initialValue: !isEditing ? DateTime.now() : null,
+                  initialValue: isEditing && initialFormData != null
+                      ? initialFormData!['foundDate'] as DateTime?
+                      : DateTime.now(),
                   decoration: InputDecoration(
                     labelText: '拾得日 *',
                     labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -370,7 +419,9 @@ class LostItemFormScreen extends HookConsumerWidget {
                 child: FormBuilderDateTimePicker(
                   name: 'foundTime',
                   inputType: InputType.time,
-                  initialValue: !isEditing ? DateTime.now() : null,
+                  initialValue: isEditing && initialFormData != null
+                      ? initialFormData!['foundTime'] as DateTime?
+                      : DateTime.now(),
                   decoration: InputDecoration(
                     labelText: '拾得時刻',
                     labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -405,7 +456,9 @@ class LostItemFormScreen extends HookConsumerWidget {
         children: [
           FormBuilderRadioGroup(
             name: 'hasRightsWaiver',
-            initialValue: true, // デフォルトで「一切の権利を放棄」を選択
+            initialValue: isEditing && initialFormData != null
+                ? initialFormData!['hasRightsWaiver'] ?? true
+                : true,
             decoration: const InputDecoration(
               labelText: '権利放棄',
             ),
@@ -436,6 +489,9 @@ class LostItemFormScreen extends HookConsumerWidget {
             const SizedBox(height: 16),
             FormBuilderRadioGroup(
               name: 'hasConsentToDisclose',
+              initialValue: isEditing && initialFormData != null
+                  ? initialFormData!['hasConsentToDisclose'] ?? true
+                  : true,
               decoration: const InputDecoration(
                 labelText: '氏名等告知の同意',
               ),
@@ -527,7 +583,9 @@ class LostItemFormScreen extends HookConsumerWidget {
           const SizedBox(height: 16),
           FormBuilderRadioGroup(
             name: 'needsReceipt',
-            initialValue: false, // デフォルトで「無」を選択
+            initialValue: isEditing && initialFormData != null
+                ? initialFormData!['needsReceipt'] ?? false
+                : false,
             decoration: const InputDecoration(
               labelText: '預り証発行',
             ),
@@ -845,109 +903,14 @@ class LostItemFormScreen extends HookConsumerWidget {
         for (final node in nodes.values) {
           node.dispose();
         }
-        cashController.dispose();
       };
     }, const []);
-
-    // 初期データの読み込み
-    useEffect(() {
-      if (draftId != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          final draft =
-              await ref.read(draftListProvider.notifier).getDraft(draftId!);
-          if (draft != null) {
-            final formData = Map<String, dynamic>.from(draft.formData);
-
-            // 日付と時間の処理
-            DateTime? foundDate;
-            if (formData['foundDate'] != null &&
-                formData['foundDate'] is String) {
-              try {
-                foundDate = DateTime.parse(formData['foundDate']);
-              } catch (e) {
-                print('Error parsing date: $e');
-              }
-            }
-
-            // 時刻がStringの場合はDateTime形式に変換
-            DateTime? foundTime;
-            if (formData['foundTime'] != null &&
-                formData['foundTime'] is String) {
-              try {
-                foundTime = DateFormat('HH:mm').parse(formData['foundTime']);
-              } catch (e) {
-                print('Error parsing time: $e');
-              }
-            }
-
-            // フォームの値を設定
-            formKey.value.currentState?.patchValue({
-              'itemName': formData['itemName'] ?? '',
-              'foundLocation': formData['foundLocation'] ?? '',
-              'routeName': formData['routeName'] ?? '',
-              'vehicleNumber': formData['vehicleNumber'] ?? '',
-              'features': formData['features'] ?? '',
-              'foundDate': foundDate,
-              'foundTime': foundTime,
-              'hasRightsWaiver': formData['hasRightsWaiver'] ?? true,
-              'rightsOptions': formData['rightsOptions'] ?? <String>[],
-              'hasConsentToDisclose': formData['hasConsentToDisclose'] ?? false,
-              'isPersonalBelongings': formData['isPersonalBelongings'] ?? false,
-              'hasIdentification': formData['hasIdentification'] ?? false,
-              'hasValuables': formData['hasValuables'] ?? false,
-              'isHighValue': formData['isHighValue'] ?? false,
-              'isLowValue': formData['isLowValue'] ?? false,
-              'isOrdinaryItem': formData['isOrdinaryItem'] ?? false,
-              'isHandedOverToPolice': formData['isHandedOverToPolice'] ?? false,
-              'isHandedOverToStation':
-                  formData['isHandedOverToStation'] ?? false,
-              'isHandedOverToOffice': formData['isHandedOverToOffice'] ?? false,
-              'isHandedOverToOthers': formData['isHandedOverToOthers'] ?? false,
-              'finderName': formData['finderName'] ?? '',
-              'finderPhone': formData['finderPhone'] ?? '',
-              'postalCode': formData['postalCode'] ?? '',
-              'finderAddress': formData['finderAddress'] ?? '',
-              'otherLocation': formData['otherLocation'] ?? '',
-              'itemColor': formData['itemColor'] ?? '',
-              'itemDescription': formData['itemDescription'] ?? '',
-              'needsReceipt': formData['needsReceipt'] ?? false,
-              'cash': formData['cash'] ?? '0',
-            });
-
-            // 権利関係のフィールドを確認
-            showRightsOptions.value = !(formData['hasRightsWaiver'] ?? true);
-          }
-        });
-      }
-      return null;
-    }, []);
-
-    final Map<String, dynamic> initialValues = {
-      'foundDate': !isEditing ? DateTime.now() : null,
-      'foundTime':
-          !isEditing ? DateFormat('HH:mm').format(DateTime.now()) : null,
-      'hasRightsWaiver': true,
-      'rightsOptions': <String>[],
-      'hasConsentToDisclose': false,
-      'finderName': '',
-      'finderPhone': '',
-      'postalCode': '',
-      'finderAddress': '',
-      'routeName': '',
-      'vehicleNumber': '',
-      'otherLocation': '',
-      'cash': '0',
-      'itemName': '',
-      'itemColor': '',
-      'itemDescription': '',
-      'needsReceipt': false,
-    };
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text(
-          '忘れ物情報登録',
+          isEditing ? '忘れ物情報編集' : '忘れ物情報登録',
           style: GoogleFonts.notoSans(),
         ),
         leading: IconButton(
@@ -996,6 +959,14 @@ class LostItemFormScreen extends HookConsumerWidget {
                   final formState = formKey.value.currentState;
                   if (formState != null && formState.saveAndValidate()) {
                     final formData = formState.value;
+                    print('=== フォームデータ ===');
+                    print('権利放棄: ${formData['hasRightsWaiver']}');
+                    print('氏名公表: ${formData['hasNameDisclosure']}');
+                    print('現金: ${formData['cash']}');
+                    print('日時: ${formData['foundDate']}, ${formData['foundTime']}');
+                    print('その他のデータ: $formData');
+                    print('==================');
+
                     ref
                         .read(draftListProvider.notifier)
                         .saveDraft(formData, draftId: draftId)
