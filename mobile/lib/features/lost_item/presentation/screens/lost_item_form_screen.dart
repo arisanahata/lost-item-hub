@@ -40,6 +40,16 @@ class LostItemFormScreen extends HookConsumerWidget {
     final filledFields = useState<Set<String>>({});
     final moneyControllers = useState<Map<String, TextEditingController>>({});
     final totalAmount = useState<int>(0);
+    final animationController = useAnimationController(
+      duration: const Duration(milliseconds: 300),
+    );
+    final fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: animationController,
+      curve: Curves.easeInOut,
+    ));
 
     // FocusNodeをuseMemoizedで作成
     final nodes = useMemoized(() {
@@ -940,147 +950,148 @@ class LostItemFormScreen extends HookConsumerWidget {
       return null;
     }, [initialFormData]);
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: Text(
-          isEditing ? '忘れ物情報編集' : '忘れ物情報登録',
-          style: GoogleFonts.notoSans(),
+    useEffect(() {
+      animationController.forward();
+      return null;
+    }, []);
+
+    return FadeTransition(
+      opacity: fadeAnimation,
+      child: Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: AppBar(
+          title: Text(
+            isEditing ? '忘れ物情報編集' : '忘れ物情報登録',
+            style: GoogleFonts.notoSans(),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const HomeScreen(),
+                ),
+                (route) => false,
+              );
+            },
+          ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const HomeScreen(),
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: FormBuilder(
+            key: formKey.value,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildRightsWaiverSection(),
+                  const SizedBox(height: 16),
+                  _buildFinderInfoSection(),
+                  const SizedBox(height: 16),
+                  _buildFoundInfoSection(),
+                  const SizedBox(height: 16),
+                  _buildLocationSection(),
+                  const SizedBox(height: 16),
+                  _buildItemInfoSection(),
+                  const SizedBox(height: 16),
+                  _buildImageSection(),
+                  const SizedBox(height: 32),
+                ],
               ),
-              (route) => false,
-            );
-          },
-        ),
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: FormBuilder(
-          key: formKey.value,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildRightsWaiverSection(),
-                const SizedBox(height: 16),
-                _buildFinderInfoSection(),
-                const SizedBox(height: 16),
-                _buildFoundInfoSection(),
-                const SizedBox(height: 16),
-                _buildLocationSection(),
-                const SizedBox(height: 16),
-                _buildItemInfoSection(),
-                const SizedBox(height: 16),
-                _buildImageSection(),
-                const SizedBox(height: 32),
-              ],
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () async {
-                  if (formKey.value.currentState?.saveAndValidate() ?? false) {
-                    final formData = formKey.value.currentState!.value;
-                    // 合計金額を追加
-                    formData['cash'] = totalAmount.value;
+        bottomNavigationBar: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final formState = formKey.value.currentState;
+                    if (formState != null && formState.saveAndValidate()) {
+                      // 変更可能な新しいマップを作成
+                      final formData = Map<String, dynamic>.from(formState.value);
+                      // 合計金額を追加
+                      formData['cash'] = totalAmount.value;
 
-                    // 下書きとして保存
-                    final draft = LostItem.fromJson(formData);
-                    final box = Hive.box<LostItem>('drafts');
-                    if (isEditing && draftId != null) {
-                      await box.put(draftId, draft);
-                    } else {
-                      await box.add(draft);
-                    }
+                      print('=== フォームデータ ===');
+                      print('権利放棄: ${formData['hasRightsWaiver']}');
+                      print('氏名公表: ${formData['hasNameDisclosure']}');
+                      print('現金: ${formData['cash']}');
+                      print('日時: ${formData['foundDate']}, ${formData['foundTime']}');
+                      print('その他のデータ: $formData');
+                      print('==================');
 
-                    // 保存完了メッセージを表示
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('下書き保存されました'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-
-                      // ホーム画面に遷移
-                      Future.delayed(const Duration(seconds: 1), () {
-                        if (context.mounted) {
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => const HomeScreen(),
-                            ),
-                            (route) => false,
-                          );
-                        }
+                      ref
+                          .read(draftListProvider.notifier)
+                          .saveDraft(formData, draftId: draftId)
+                          .then((_) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isEditing ? '上書き保存しました' : '下書きを保存しました'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        Navigator.pop(context);
                       });
                     }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[200],
-                  foregroundColor: Colors.grey[800],
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  },
+                  icon: const Icon(Icons.save_outlined,
+                      size: 24, color: Colors.white),
+                  label: Text(
+                    '下書き保存',
+                    style: GoogleFonts.notoSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                child: Text(
-                  '下書き保存',
-                  style: GoogleFonts.notoSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  final formState = formKey.value.currentState;
-                  if (formState != null && formState.saveAndValidate()) {
-                    final formData = formState.value;
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            LostItemConfirmScreen(formData: formData),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.check_circle_outline,
-                    size: 24, color: Colors.white),
-                label: Text(
-                  '確認',
-                  style: GoogleFonts.notoSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 12, 51, 135),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 223, 170, 36),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final formState = formKey.value.currentState;
+                    if (formState != null && formState.saveAndValidate()) {
+                      final formData = formState.value;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              LostItemConfirmScreen(formData: formData),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.check_circle_outline,
+                      size: 24, color: Colors.white),
+                  label: Text(
+                    '確認',
+                    style: GoogleFonts.notoSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 12, 51, 135),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
