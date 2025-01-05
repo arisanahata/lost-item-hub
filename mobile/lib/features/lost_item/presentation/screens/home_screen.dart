@@ -69,27 +69,19 @@ class HomeScreen extends HookConsumerWidget {
                     final item = items[index];
                     final formData = item.formData;
                     final itemName = formData['itemName'] as String? ?? '';
-                    final foundDateStr = formData['foundDate'] as String?;
-                    final foundTime = formData['foundTime'] as String?;
-                    final foundLocation =
-                        formData['foundLocation'] as String? ?? '';
+                    final foundDate = formData['foundDate'] as DateTime?;
+                    final foundTime = formData['foundTime'] as DateTime?;
+                    final foundLocation = formData['foundLocation'] as String? ?? '';
                     final routeName = formData['routeName'] as String? ?? '';
-                    final vehicleNumber =
-                        formData['vehicleNumber'] as String? ?? '';
+                    final vehicleNumber = formData['vehicleNumber'] as String? ?? '';
                     final itemFeatures = formData['features'] as String? ?? '';
 
-                    String dateDisplay = '';
-                    if (foundDateStr != null) {
-                      try {
-                        final date = DateTime.parse(foundDateStr);
-                        dateDisplay = DateFormat('yyyy/MM/dd').format(date);
-                        if (foundTime != null && foundTime.isNotEmpty) {
-                          dateDisplay += ' $foundTime';
-                        }
-                      } catch (e) {
-                        print('Error parsing date: $e');
-                      }
-                    }
+                    String dateStr = foundDate != null
+                        ? DateFormat('yyyy/MM/dd').format(foundDate)
+                        : '';
+                    String timeStr = foundTime != null
+                        ? DateFormat('HH:mm').format(foundTime)
+                        : '';
 
                     // 拾得場所のテキストを構築
                     List<String> locationParts = [];
@@ -223,11 +215,11 @@ class HomeScreen extends HookConsumerWidget {
                                         ),
                                       ],
                                     ),
-                                    if (dateDisplay.isNotEmpty ||
+                                    if (dateStr.isNotEmpty ||
                                         locationText.isNotEmpty ||
                                         itemFeatures.isNotEmpty) ...[
                                       const SizedBox(height: 8),
-                                      if (dateDisplay.isNotEmpty)
+                                      if (dateStr.isNotEmpty)
                                         Row(
                                           children: [
                                             Icon(
@@ -247,7 +239,7 @@ class HomeScreen extends HookConsumerWidget {
                                             const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
-                                                dateDisplay,
+                                                dateStr,
                                                 style: GoogleFonts.notoSans(
                                                   fontSize: 14,
                                                   color: Colors.grey[700],
