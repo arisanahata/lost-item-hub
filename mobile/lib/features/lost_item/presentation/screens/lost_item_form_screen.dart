@@ -919,32 +919,28 @@ class LostItemFormScreen extends HookConsumerWidget {
     }
 
     useEffect(() {
-      return () {
-        for (final node in nodes.values) {
-          node.dispose();
-        }
-      };
-    }, const []);
-
-    useEffect(() {
       if (isEditing && initialFormData != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          // まず全データを設定
           formKey.value.currentState?.patchValue({
-            'foundDate': initialFormData!['foundDate'] as DateTime?,
-            'foundTime': initialFormData!['foundTime'] as DateTime?,
-            'hasRightsWaiver': initialFormData!['hasRightsWaiver'] ?? true,
-            'hasConsentToDisclose':
-                initialFormData!['hasConsentToDisclose'] ?? true,
-            'rightsOptions': initialFormData!['rightsOptions'] ?? [],
-            'needsReceipt': initialFormData!['needsReceipt'] ?? false,
-            'itemColor': initialFormData!['itemColor'] ?? '',
-            'itemDescription': initialFormData!['itemDescription'] ?? '',
             ...initialFormData!,
           });
 
           // 権利放棄の状態を設定
-          showRightsOptions.value =
-              !(initialFormData!['hasRightsWaiver'] ?? true);
+          final hasRightsWaiver = initialFormData!['hasRightsWaiver'] ?? true;
+          showRightsOptions.value = !hasRightsWaiver;
+
+          // 権利関連の値を上書き設定（List<dynamic>をList<String>に変換）
+          final rightsOptions =
+              (initialFormData!['rightsOptions'] as List<dynamic>?)
+                      ?.map((e) => e.toString())
+                      .toList() ??
+                  [];
+
+          formKey.value.currentState?.fields['hasRightsWaiver']
+              ?.didChange(hasRightsWaiver);
+          formKey.value.currentState?.fields['rightsOptions']
+              ?.didChange(rightsOptions);
         });
       }
       return null;
@@ -1010,7 +1006,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                     final formState = formKey.value.currentState;
                     if (formState != null && formState.saveAndValidate()) {
                       // 変更可能な新しいマップを作成
-                      final formData = Map<String, dynamic>.from(formState.value);
+                      final formData =
+                          Map<String, dynamic>.from(formState.value);
                       // 合計金額を追加
                       formData['cash'] = totalAmount.value;
 
@@ -1018,7 +1015,8 @@ class LostItemFormScreen extends HookConsumerWidget {
                       print('権利放棄: ${formData['hasRightsWaiver']}');
                       print('氏名公表: ${formData['hasNameDisclosure']}');
                       print('現金: ${formData['cash']}');
-                      print('日時: ${formData['foundDate']}, ${formData['foundTime']}');
+                      print(
+                          '日時: ${formData['foundDate']}, ${formData['foundTime']}');
                       print('その他のデータ: $formData');
                       print('==================');
 
@@ -1026,20 +1024,31 @@ class LostItemFormScreen extends HookConsumerWidget {
                           .read(draftListProvider.notifier)
                           .saveDraft(formData, draftId: draftId)
                           .then((_) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(isEditing ? '上書き保存しました' : '下書きを保存しました'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        Navigator.pop(context);
+                        if (context.mounted) {
+                          // まずSnackBarを表示
+                          final messenger = ScaffoldMessenger.of(context);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(isEditing ? '上書き保存しました' : '下書き保存しました'),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                          
+                          // 少し遅延させてから画面遷移
+                          Future.delayed(const Duration(milliseconds: 500), () {
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+                          });
+                        }
                       });
                     }
                   },
                   icon: const Icon(Icons.save_outlined,
                       size: 24, color: Colors.white),
                   label: Text(
-                    '下書き保存',
+                    isEditing ? '上書き保存' : '下書き保存',
                     style: GoogleFonts.notoSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
