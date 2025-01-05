@@ -1,17 +1,14 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
-import 'package:hive/hive.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lost_item_hub/features/lost_item/presentation/providers/draft_provider.dart';
 import 'package:expandable/expandable.dart';
 import 'home_screen.dart';
@@ -335,7 +332,7 @@ class LostItemFormScreen extends HookConsumerWidget {
     Widget _buildFoundInfoSection() {
       return _buildSectionCard(
         title: '拾得日時',
-        icon: Icons.event,
+        icon: Icons.calendar_today,
         iconColor: Colors.grey[600],
         children: [
           Row(
@@ -343,116 +340,58 @@ class LostItemFormScreen extends HookConsumerWidget {
               Expanded(
                 child: FormBuilderDateTimePicker(
                   name: 'foundDate',
-                  initialValue: !isEditing ? DateTime.now() : null,
                   inputType: InputType.date,
                   format: DateFormat('yyyy/MM/dd'),
+                  initialValue: !isEditing ? DateTime.now() : null,
                   decoration: InputDecoration(
-                    labelText: '拾得日',
-                    labelStyle: TextStyle(
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.bold,
-                    ),
+                    labelText: '拾得日 *',
+                    labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                    prefixIcon:
+                        Icon(Icons.calendar_today, color: Colors.grey[600]),
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    suffixIcon: Icon(
-                      Icons.calendar_today,
-                      color: Colors.grey[400],
-                    ),
+                    border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8))),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Colors.grey[300]!)),
+                    focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Color(0xFF1a56db))),
                   ),
                   validator:
                       FormBuilderValidators.required(errorText: '拾得日を入力してください'),
-                  onChanged: (value) {
-                    if (value != null) {
-                      onFieldChanged(
-                          'foundDate', DateFormat('yyyy/MM/dd').format(value));
-                    }
-                  },
+                  onChanged: (value) => onFieldChanged('foundDate', value),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: FormBuilderDateTimePicker(
                   name: 'foundTime',
-                  initialValue: !isEditing ? DateTime.now() : null,
                   inputType: InputType.time,
-                  format: DateFormat('HH:mm'),
+                  initialValue: !isEditing ? DateTime.now() : null,
                   decoration: InputDecoration(
                     labelText: '拾得時刻',
-                    labelStyle: TextStyle(
-                      color: Colors.grey[700],
-                      fontWeight: FontWeight.bold,
-                    ),
+                    labelStyle: GoogleFonts.notoSans(fontSize: 16),
+                    prefixIcon:
+                        Icon(Icons.access_time, color: Colors.grey[600]),
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    suffixIcon: Icon(
-                      Icons.access_time,
-                      color: Colors.grey[400],
-                    ),
+                    border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8))),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Colors.grey[300]!)),
+                    focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Color(0xFF1a56db))),
                   ),
-                  validator: FormBuilderValidators.required(
-                      errorText: '拾得時刻を入力してください'),
-                  onChanged: (value) {
-                    if (value != null) {
-                      onFieldChanged(
-                          'foundTime', DateFormat('HH:mm').format(value));
-                    }
-                  },
+                  onChanged: (value) => onFieldChanged('foundTime', value),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: FormBuilderTextField(
-                  name: 'routeName',
-                  focusNode: nodes['routeName'],
-                  decoration: InputDecoration(
-                    labelText: '路線',
-                    labelStyle: GoogleFonts.notoSans(fontSize: 16),
-                    prefixIcon: Icon(Icons.train, color: Colors.grey[600]),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: FormBuilderTextField(
-                  name: 'vehicleNumber',
-                  decoration: InputDecoration(
-                    labelText: '車番',
-                    labelStyle: GoogleFonts.notoSans(fontSize: 16),
-                    prefixIcon: Icon(Icons.numbers, color: Colors.grey[600]),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FormBuilderTextField(
-            name: 'otherLocation',
-            minLines: 2,
-            maxLines: null,
-            decoration: InputDecoration(
-              labelText: 'その他の場所',
-              labelStyle: GoogleFonts.notoSans(fontSize: 16),
-              prefixIcon: Icon(Icons.place, color: Colors.grey[600]),
-            ),
-            onChanged: (value) => onFieldChanged('otherLocation', value),
           ),
         ],
       );
@@ -466,6 +405,7 @@ class LostItemFormScreen extends HookConsumerWidget {
         children: [
           FormBuilderRadioGroup(
             name: 'hasRightsWaiver',
+            initialValue: true, // デフォルトで「一切の権利を放棄」を選択
             decoration: const InputDecoration(
               labelText: '権利放棄',
             ),
@@ -527,17 +467,14 @@ class LostItemFormScreen extends HookConsumerWidget {
               prefixIcon: Icon(Icons.inventory_2, color: Colors.grey[600]),
               filled: true,
               fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8))),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF1a56db)),
-              ),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
             validator:
                 FormBuilderValidators.required(errorText: '遺失物の名称を入力してください'),
@@ -554,17 +491,14 @@ class LostItemFormScreen extends HookConsumerWidget {
               prefixIcon: Icon(Icons.color_lens, color: Colors.grey[600]),
               filled: true,
               fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8))),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF1a56db)),
-              ),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
             onChanged: (value) => onFieldChanged('itemColor', value),
           ),
@@ -579,23 +513,21 @@ class LostItemFormScreen extends HookConsumerWidget {
               prefixIcon: Icon(Icons.description, color: Colors.grey[600]),
               filled: true,
               fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8))),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF1a56db)),
-              ),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
             onChanged: (value) => onFieldChanged('itemDescription', value),
           ),
           const SizedBox(height: 16),
           FormBuilderRadioGroup(
             name: 'needsReceipt',
+            initialValue: false, // デフォルトで「無」を選択
             decoration: const InputDecoration(
               labelText: '預り証発行',
             ),
@@ -703,17 +635,14 @@ class LostItemFormScreen extends HookConsumerWidget {
               prefixIcon: Icon(Icons.person, color: Colors.grey[600]),
               filled: true,
               fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8))),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF1a56db)),
-              ),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
           ),
           const SizedBox(height: 16),
@@ -726,17 +655,14 @@ class LostItemFormScreen extends HookConsumerWidget {
               prefixIcon: Icon(Icons.phone, color: Colors.grey[600]),
               filled: true,
               fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8))),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF1a56db)),
-              ),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
             keyboardType: TextInputType.phone,
           ),
@@ -755,17 +681,15 @@ class LostItemFormScreen extends HookConsumerWidget {
                         Icon(Icons.location_on, color: Colors.grey[600]),
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8))),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF1a56db)),
-                    ),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Colors.grey[300]!)),
+                    focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Color(0xFF1a56db))),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -821,17 +745,14 @@ class LostItemFormScreen extends HookConsumerWidget {
               prefixIcon: Icon(Icons.home, color: Colors.grey[600]),
               filled: true,
               fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8))),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF1a56db)),
-              ),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
             onChanged: (value) => onFieldChanged('finderAddress', value),
           ),
@@ -857,17 +778,15 @@ class LostItemFormScreen extends HookConsumerWidget {
                     prefixIcon: Icon(Icons.train, color: Colors.grey[600]),
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8))),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF1a56db)),
-                    ),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Colors.grey[300]!)),
+                    focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Color(0xFF1a56db))),
                   ),
                 ),
               ),
@@ -881,17 +800,15 @@ class LostItemFormScreen extends HookConsumerWidget {
                     prefixIcon: Icon(Icons.numbers, color: Colors.grey[600]),
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8))),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFF1a56db)),
-                    ),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Colors.grey[300]!)),
+                    focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(color: Color(0xFF1a56db))),
                   ),
                 ),
               ),
@@ -908,17 +825,14 @@ class LostItemFormScreen extends HookConsumerWidget {
               prefixIcon: Icon(Icons.place, color: Colors.grey[600]),
               filled: true,
               fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8))),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF1a56db)),
-              ),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Colors.grey[300]!)),
+              focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
             onChanged: (value) => onFieldChanged('otherLocation', value),
           ),
@@ -1033,91 +947,20 @@ class LostItemFormScreen extends HookConsumerWidget {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text(
-          '拾得物の登録',
+          '忘れ物情報登録',
           style: GoogleFonts.notoSans(),
         ),
-        actions: [
-          if (showButtons.value)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        final formState = formKey.value.currentState;
-                        if (formState != null && formState.saveAndValidate()) {
-                          final formData = formState.value;
-                          ref
-                              .read(draftListProvider.notifier)
-                              .saveDraft(formData, draftId: draftId)
-                              .then((_) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    isEditing ? '上書き保存しました' : '下書きを保存しました'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            Navigator.pop(context);
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.save_outlined,
-                          size: 24, color: Colors.white),
-                      label: Text(
-                        isEditing ? '上書き保存' : '下書き保存',
-                        style: GoogleFonts.notoSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 223, 170, 36),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        final formState = formKey.value.currentState;
-                        if (formState != null && formState.saveAndValidate()) {
-                          final formData = formState.value;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  LostItemConfirmScreen(formData: formData),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.check_circle_outline,
-                          size: 24, color: Colors.white),
-                      label: Text(
-                        '確認',
-                        style: GoogleFonts.notoSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 12, 51, 135),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const HomeScreen(),
               ),
-            ),
-        ],
+              (route) => false,
+            );
+          },
+        ),
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -1141,6 +984,87 @@ class LostItemFormScreen extends HookConsumerWidget {
               const SizedBox(height: 32),
             ],
           ),
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final formState = formKey.value.currentState;
+                  if (formState != null && formState.saveAndValidate()) {
+                    final formData = formState.value;
+                    ref
+                        .read(draftListProvider.notifier)
+                        .saveDraft(formData, draftId: draftId)
+                        .then((_) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(isEditing ? '上書き保存しました' : '下書きを保存しました'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    });
+                  }
+                },
+                icon: const Icon(Icons.save_outlined,
+                    size: 24, color: Colors.white),
+                label: Text(
+                  '下書き保存',
+                  style: GoogleFonts.notoSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 223, 170, 36),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final formState = formKey.value.currentState;
+                  if (formState != null && formState.saveAndValidate()) {
+                    final formData = formState.value;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            LostItemConfirmScreen(formData: formData),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.check_circle_outline,
+                    size: 24, color: Colors.white),
+                label: Text(
+                  '確認',
+                  style: GoogleFonts.notoSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 12, 51, 135),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
