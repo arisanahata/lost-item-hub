@@ -6,20 +6,22 @@ import '../component/section_card.dart';
 import '../component/money_input.dart';
 
 class BasicSection extends StatelessWidget {
-  final Map<String, FocusNode>? nodes;
+  final Map<String, FocusNode> nodes;
   final Map<String, dynamic>? initialData;
   final Function(String, dynamic)? onFieldChanged;
-  final bool isEditing;
   final GlobalKey<FormBuilderState> formKey;
+  final bool isEditing;
+  final ValueNotifier<int>? totalAmount;
 
   const BasicSection({
-    super.key,
-    this.nodes,
+    Key? key,
+    required this.nodes,
     this.initialData,
     this.onFieldChanged,
-    this.isEditing = false,
     required this.formKey,
-  });
+    required this.isEditing,
+    this.totalAmount,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +33,7 @@ class BasicSection extends StatelessWidget {
         children: [
           FormBuilderTextField(
             name: 'itemName',
-            focusNode: nodes!['itemName'],
+            focusNode: nodes['itemName'],
             decoration: InputDecoration(
               labelText: '遺失物の名称 *',
               labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -47,15 +49,41 @@ class BasicSection extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
-            validator: FormBuilderValidators.required(errorText: '遺失物の名称を入力してください'),
+            validator:
+                FormBuilderValidators.required(errorText: '遺失物の名称を入力してください'),
             onChanged: (value) => onFieldChanged?.call('itemName', value),
           ),
           const SizedBox(height: 16),
+          // 現金データ用の非表示フィールド
+          FormBuilderField<int>(
+            name: 'cash',
+            initialValue: initialData?['cash'] ?? 0,
+            builder: (FormFieldState<int> field) {
+              return const SizedBox.shrink();
+            },
+          ),
           MoneyInput(
-            formKey: formKey,
             isEditing: isEditing,
             initialFormData: initialData,
-            onFieldChanged: onFieldChanged,
+            formKey: formKey,
+            onFieldChanged: (field, value) {
+              print('BasicSection - 現金データが更新されました:');
+              print('  フィールド名: $field');
+              print('  値: $value');
+
+              print('BasicSection - フォームの状態を更新');
+              Future.microtask(() {
+                if (formKey.currentState?.fields['cash'] != null) {
+                  formKey.currentState?.fields['cash']?.didChange(value);
+                  print('  フォームの値を更新: $value');
+                } else {
+                  print('  cash フィールドが見つかりません');
+                }
+
+                print('BasicSection - 親コンポーネントに通知');
+                onFieldChanged?.call('cash', value);
+              });
+            },
           ),
           const SizedBox(height: 16),
           FormBuilderTextField(
@@ -97,7 +125,8 @@ class BasicSection extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
-            onChanged: (value) => onFieldChanged?.call('itemDescription', value),
+            onChanged: (value) =>
+                onFieldChanged?.call('itemDescription', value),
           ),
           const SizedBox(height: 16),
           FormBuilderRadioGroup(

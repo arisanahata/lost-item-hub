@@ -4,7 +4,9 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../util/image_storage.dart';
 import '../../../viewmodel/form_viewmodel.dart';
+import '../../component/money_input.dart';
 import '../../sections/basic_section.dart';
 import '../../sections/date_section.dart';
 import '../../sections/finder_section.dart';
@@ -31,10 +33,21 @@ class LostItemFormScreen extends HookConsumerWidget {
     final formKey = useRef(GlobalKey<FormBuilderState>());
     final isSaving = useState(false);
     final totalAmount = useState(0);
-    final imageFiles = useState<List<XFile>>([]);
     final selectedImages = useState<List<XFile>>([]);
     final showRightsOptions = useState(false);
     final showButtons = useState(true);
+
+    // 初期画像の読み込み
+    useEffect(() {
+      if (initialFormData != null && initialFormData!['imagePaths'] != null) {
+        Future.microtask(() async {
+          final imagePaths = List<String>.from(initialFormData!['imagePaths']);
+          final images = await ImageStorage.pathsToXFiles(imagePaths);
+          selectedImages.value = images;
+        });
+      }
+      return null;
+    }, []);
 
     // ScrollControllerの初期化と破棄を適切に管理
     final scrollController = useMemoized(() => ScrollController(), []);
@@ -46,7 +59,6 @@ class LostItemFormScreen extends HookConsumerWidget {
 
     final isInteracting = useState(false);
     final filledFields = useState<Set<String>>({});
-    final isSubmitting = useState(false);
 
     // AnimationControllerの初期化
     final vsync = useSingleTickerProvider();
@@ -126,32 +138,64 @@ class LostItemFormScreen extends HookConsumerWidget {
 
     // フォームの値が変更されたときの処理
     void onFieldChanged(String fieldName, dynamic value) {
-      if (value != null && value.toString().isNotEmpty) {
-        filledFields.value = {...filledFields.value, fieldName};
+      print('LostItemFormScreen - フィールドが変更されました:');
+      print('  フィールド名: $fieldName');
+      print('  値: $value');
+      
+      if (value != null) {
+        // build中のsetStateを避けるために遅延実行
+        Future.microtask(() {
+          filledFields.value = {...filledFields.value, fieldName};
+          // フォームの状態を更新
+          if (formKey.value.currentState?.fields[fieldName] != null) {
+            print('  フォームの値を更新: $value');
+            formKey.value.currentState?.fields[fieldName]?.didChange(value);
+          } else {
+            print('  フィールドが見つかりません: $fieldName');
+          }
+        });
       } else {
-        filledFields.value = {...filledFields.value}..remove(fieldName);
-      }
-
-      // フォームの状態を更新
-      if (formKey.value.currentState != null) {
-        final currentField = formKey.value.currentState!.fields[fieldName];
-        if (currentField != null && currentField.value != value) {
-          currentField.didChange(value);
-        }
+        Future.microtask(() {
+          filledFields.value = {...filledFields.value}..remove(fieldName);
+          print('  フィールドを削除: $fieldName');
+        });
       }
     }
 
     // 保存処理
     Future<void> saveDraft() async {
+      print('\nLostItemFormScreen - 保存処理を開始');
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
+        print('  フォームのバリデーションが成功');
         final formData =
             Map<String, dynamic>.from(formKey.value.currentState!.value);
-        formData['cash'] = totalAmount.value;
+        
+        print('  フォームの全データ:');
+        formData.forEach((key, value) {
+          print('    $key: $value');
+        });
 
-        print('=== 保存するフォームデータ ===');
+        // 現金データを追加（フォームから取得）
+        final cashValue = formData['cash'] as int?;
+        print('\n  現金データの処理:');
+        print('    取得した値: $cashValue');
+        
+        if (cashValue != null && cashValue > 0) {
+          formData['cash'] = cashValue;
+          print('    保存する金額: $cashValue');
+        } else {
+          print('    現金データは保存しません');
+        }
+
+        // 画像データを追加
+        formData['images'] = selectedImages.value;
+
+        print('\n=== 保存するフォームデータ ===');
         print('編集モード: $isEditing');
         print('Draft ID: $draftId');
+        print('現金: ${formData['cash'] ?? 0}円');
         print('フォームデータ: $formData');
+        print('画像枚数: ${selectedImages.value.length}');
         print('========================');
 
         try {
@@ -205,7 +249,6 @@ class LostItemFormScreen extends HookConsumerWidget {
 
     Future<void> onSubmit() async {
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
-        isSubmitting.value = true;
         try {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -215,9 +258,7 @@ class LostItemFormScreen extends HookConsumerWidget {
               ),
             ),
           );
-        } finally {
-          isSubmitting.value = false;
-        }
+        } finally {}
       }
     }
 
@@ -266,13 +307,13 @@ class LostItemFormScreen extends HookConsumerWidget {
                   onFieldChanged: onFieldChanged,
                   formKey: formKey.value,
                   isEditing: isEditing,
+                  totalAmount: totalAmount,
                 ),
                 ImageSection(
-                  initialImages: imageFiles.value,
+                  initialImages: selectedImages.value,
                   onImagesChanged: (images) {
                     selectedImages.value = images;
-                    formKey.value.currentState?.fields['images']
-                        ?.didChange(images);
+                    onFieldChanged('images', images);
                   },
                 ),
                 const SizedBox(height: 32),

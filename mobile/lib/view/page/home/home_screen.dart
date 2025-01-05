@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -176,8 +177,15 @@ class HomeScreen extends HookConsumerWidget {
                         color: Colors.white,
                         elevation: 0,
                         margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           onTap: () {
                             Navigator.push(
                               context,
@@ -190,151 +198,139 @@ class HomeScreen extends HookConsumerWidget {
                           },
                           child: Stack(
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.inventory_2,
-                                          size: 20,
-                                          color: Colors.grey[600],
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '遺失物の名称:',
-                                          style: GoogleFonts.notoSans(
-                                            fontSize: 14,
-                                            color: Colors.grey[600],
-                                            fontWeight: FontWeight.w500,
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: // サムネイル画像
+                                        item.imagePaths != null &&
+                                                item.imagePaths!.isNotEmpty
+                                            ? Container(
+                                                width: 100,
+                                                height: 100,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withOpacity(0.1),
+                                                      blurRadius: 8,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                  image: DecorationImage(
+                                                    image: FileImage(File(
+                                                        item.imagePaths!.first)),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              )
+                                            : Container(
+                                                width: 100,
+                                                height: 100,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  color: Colors.grey[100],
+                                                ),
+                                                child: Icon(
+                                                  Icons.image_not_supported_outlined,
+                                                  size: 32,
+                                                  color: Colors.grey[400],
+                                                ),
+                                              ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      itemName.isEmpty ? '-' : itemName,
+                                                      style: GoogleFonts.notoSans(
+                                                        fontSize: 18,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.grey[800],
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (item.imagePaths != null &&
+                                                  item.imagePaths!.length > 1)
+                                                Container(
+                                                  margin: const EdgeInsets.only(left: 8),
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[100],
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.photo_library_outlined,
+                                                        size: 14,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        '${item.imagePaths!.length}枚',
+                                                        style: GoogleFonts.notoSans(
+                                                          fontSize: 12,
+                                                          color: Colors.grey[600],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                            ],
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            itemName.isEmpty ? '-' : itemName,
-                                            style: GoogleFonts.notoSans(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.grey[800],
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                          const SizedBox(height: 12),
+                                          _buildInfoRow(
+                                            Icons.event_outlined,
+                                            '拾得日時',
+                                            dateStr.isEmpty && timeStr.isEmpty
+                                                ? '-'
+                                                : '$dateStr ${timeStr.isEmpty ? '' : timeStr}',
                                           ),
-                                        ),
-                                        Icon(
-                                          Icons.chevron_right,
-                                          color: Colors.grey[400],
-                                          size: 24,
-                                        ),
-                                      ],
+                                          const SizedBox(height: 8),
+                                          _buildInfoRow(
+                                            Icons.place_outlined,
+                                            '拾得場所',
+                                            locationText.isEmpty ? '-' : locationText,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    if (dateStr.isNotEmpty ||
-                                        locationText.isNotEmpty ||
-                                        itemFeatures.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      if (dateStr.isNotEmpty)
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.event,
-                                              size: 16,
-                                              color: Colors.grey[600],
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '拾得日時:',
-                                              style: GoogleFonts.notoSans(
-                                                fontSize: 14,
-                                                color: Colors.grey[600],
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                dateStr,
-                                                style: GoogleFonts.notoSans(
-                                                  fontSize: 14,
-                                                  color: Colors.grey[700],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      if (locationText.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.location_on,
-                                              size: 16,
-                                              color: Colors.grey[600],
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '拾得場所:',
-                                              style: GoogleFonts.notoSans(
-                                                fontSize: 14,
-                                                color: Colors.grey[600],
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                locationText,
-                                                style: GoogleFonts.notoSans(
-                                                  fontSize: 14,
-                                                  color: Colors.grey[700],
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                      if (itemFeatures.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.format_list_bulleted,
-                                              size: 16,
-                                              color: Colors.grey[600],
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              '特徴:',
-                                              style: GoogleFonts.notoSans(
-                                                fontSize: 14,
-                                                color: Colors.grey[600],
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                itemFeatures,
-                                                style: GoogleFonts.notoSans(
-                                                  fontSize: 14,
-                                                  color: Colors.grey[700],
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ],
-                                  ],
-                                ),
+                                  ),
+                                  Container(
+                                    height: 132, // サムネイルの高さに合わせる
+                                    padding: const EdgeInsets.only(right: 8),
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -370,6 +366,40 @@ class HomeScreen extends HookConsumerWidget {
         ),
         backgroundColor: Theme.of(context).primaryColor,
       ),
+    );
+  }
+
+  // 情報行を構築するヘルパーメソッド
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: Colors.grey[600],
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '$label:',
+          style: GoogleFonts.notoSans(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.notoSans(
+              fontSize: 14,
+              color: Colors.grey[800],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

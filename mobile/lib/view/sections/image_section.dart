@@ -22,16 +22,66 @@ class ImageSection extends HookWidget {
     Future<void> pickImages() async {
       try {
         final ImagePicker picker = ImagePicker();
-        final List<XFile> images = await picker.pickMultiImage();
+        final List<XFile> images = await picker.pickMultiImage(
+          imageQuality: 70, // 画質を70%に圧縮
+          maxWidth: 1024, // 最大幅を1024pxに制限
+        );
+
         if (images.isNotEmpty) {
+          // 選択された画像のサイズをチェック
+          for (var image in images) {
+            final file = File(image.path);
+            final bytes = await file.length();
+            final sizeInMb = bytes / (1024 * 1024);
+
+            if (sizeInMb > 10) {
+              // 10MB以上の場合は警告
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('10MB以上の画像は選択できません'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+              return;
+            }
+          }
+
           final newImages = [...selectedImages.value, ...images];
+          if (newImages.length > 5) {
+            // 最大5枚まで
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('画像は最大5枚まで選択できます'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+            return;
+          }
+
           selectedImages.value = newImages;
           onImagesChanged?.call(newImages);
+
+          // 成功メッセージを表示
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('画像を追加しました'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('画像の選択に失敗しました: $e')),
+            SnackBar(
+              content: Text('画像の選択に失敗しました: $e'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }

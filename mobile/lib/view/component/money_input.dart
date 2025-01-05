@@ -62,7 +62,8 @@ class MoneyInput extends HookWidget {
             child: Builder(
               builder: (context) {
                 final count = int.tryParse(
-                    moneyControllers.value['yen$denomination']?.text ?? '0') ??
+                        moneyControllers.value['yen$denomination']?.text ??
+                            '0') ??
                     0;
                 final amount = count * value;
                 return Container(
@@ -110,18 +111,27 @@ class MoneyInput extends HookWidget {
         '5',
         '1'
       ];
+      
+      print('MoneyInput - 各金種の入力値:');
       for (var d in denominations) {
-        final count =
-            int.tryParse(moneyControllers.value['yen$d']?.text ?? '0') ?? 0;
+        final count = int.tryParse(moneyControllers.value['yen$d']?.text ?? '0') ?? 0;
+        print('  ${d}円: $count枚');
         sum += count * int.parse(d);
       }
+      
+      print('MoneyInput - 合計金額を計算: $sum円');
       totalAmount.value = sum;
+      
+      print('MoneyInput - onFieldChangedを呼び出し');
+      onFieldChanged?.call('cash', sum);
     }
 
     void handleMoneyInput(String denomination, String? value) {
+      print('MoneyInput - 金額入力: $denomination円 = $value');
       final controller = moneyControllers.value['yen$denomination']!;
 
       if (value == null || value.isEmpty) {
+        print('MoneyInput - 空の入力を0に設定');
         controller.text = '0';
         controller.selection = TextSelection.fromPosition(
           TextPosition(offset: 1),
@@ -131,18 +141,19 @@ class MoneyInput extends HookWidget {
         if (newValue.startsWith('0') && newValue.length > 1) {
           newValue = newValue.substring(1);
         }
+        print('MoneyInput - 正規化された入力値: $newValue');
         controller.text = newValue;
         controller.selection = TextSelection.fromPosition(
           TextPosition(offset: newValue.length),
         );
       }
 
-      formKey.currentState?.fields['yen$denomination']
-          ?.didChange(controller.text);
+      formKey.currentState?.fields['yen$denomination']?.didChange(controller.text);
       calculateTotalAmount();
     }
 
     useEffect(() {
+      print('MoneyInput - 初期化処理を開始');
       final denominations = [
         '10000',
         '5000',
@@ -157,15 +168,14 @@ class MoneyInput extends HookWidget {
       ];
       final controllers = {
         for (var d in denominations)
-          'yen$d': TextEditingController(
-              text: isEditing && initialFormData != null
-                  ? (initialFormData!['yen$d']?.toString() ?? '0')
-                  : '0')
+          'yen$d': TextEditingController(text: '0')
       };
       moneyControllers.value = controllers;
 
-      if (isEditing && initialFormData != null) {
-        if (initialFormData!['cash'] != null) {
+      // 既存データの読み込みを遅延実行
+      if (isEditing && initialFormData != null && initialFormData!['cash'] != null) {
+        print('MoneyInput - 既存の現金データを読み込み: ${initialFormData!['cash']}円');
+        Future.microtask(() {
           int remainingAmount = initialFormData!['cash'] as int;
           final denominations = [
             10000,
@@ -188,7 +198,9 @@ class MoneyInput extends HookWidget {
             }
           }
           calculateTotalAmount();
-        }
+        });
+      } else {
+        calculateTotalAmount();
       }
 
       return () {
@@ -255,66 +267,26 @@ class MoneyInput extends HookWidget {
         ),
         child: Column(
           children: [
-            _buildCashInput(
-                '10000',
-                '10,000円札',
-                10000,
-                (value) => handleMoneyInput('10000', value),
-                moneyControllers),
-            _buildCashInput(
-                '5000',
-                '5,000円札',
-                5000,
-                (value) => handleMoneyInput('5000', value),
-                moneyControllers),
-            _buildCashInput(
-                '2000',
-                '2,000円札',
-                2000,
-                (value) => handleMoneyInput('2000', value),
-                moneyControllers),
-            _buildCashInput(
-                '1000',
-                '1,000円札',
-                1000,
-                (value) => handleMoneyInput('1000', value),
-                moneyControllers),
-            _buildCashInput(
-                '500',
-                '500円玉',
-                500,
-                (value) => handleMoneyInput('500', value),
-                moneyControllers),
-            _buildCashInput(
-                '100',
-                '100円玉',
-                100,
-                (value) => handleMoneyInput('100', value),
-                moneyControllers),
-            _buildCashInput(
-                '50',
-                '50円玉',
-                50,
-                (value) => handleMoneyInput('50', value),
-                moneyControllers),
-            _buildCashInput(
-                '10',
-                '10円玉',
-                10,
-                (value) => handleMoneyInput('10', value),
-                moneyControllers),
-            _buildCashInput(
-                '5',
-                '5円玉',
-                5,
-                (value) => handleMoneyInput('5', value),
-                moneyControllers),
-            _buildCashInput(
-                '1',
-                '1円玉',
-                1,
-                (value) => handleMoneyInput('1', value),
-                moneyControllers),
+            _buildCashInput('10000', '10,000円札', 10000,
+                (value) => handleMoneyInput('10000', value), moneyControllers),
+            _buildCashInput('5000', '5,000円札', 5000,
+                (value) => handleMoneyInput('5000', value), moneyControllers),
+            _buildCashInput('2000', '2,000円札', 2000,
+                (value) => handleMoneyInput('2000', value), moneyControllers),
+            _buildCashInput('1000', '1,000円札', 1000,
+                (value) => handleMoneyInput('1000', value), moneyControllers),
+            _buildCashInput('500', '500円玉', 500,
+                (value) => handleMoneyInput('500', value), moneyControllers),
+            _buildCashInput('100', '100円玉', 100,
+                (value) => handleMoneyInput('100', value), moneyControllers),
+            _buildCashInput('50', '50円玉', 50,
+                (value) => handleMoneyInput('50', value), moneyControllers),
+            _buildCashInput('10', '10円玉', 10,
+                (value) => handleMoneyInput('10', value), moneyControllers),
+            _buildCashInput('5', '5円玉', 5,
+                (value) => handleMoneyInput('5', value), moneyControllers),
+            _buildCashInput('1', '1円玉', 1,
+                (value) => handleMoneyInput('1', value), moneyControllers),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),

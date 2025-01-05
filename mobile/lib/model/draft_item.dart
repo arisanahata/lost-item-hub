@@ -18,11 +18,15 @@ class DraftItem {
   @HiveField(3)
   final DateTime updatedAt;
 
+  @HiveField(4)
+  final List<String>? imagePaths;
+
   const DraftItem({
     required this.id,
     required this.formData,
     required this.createdAt,
     required this.updatedAt,
+    this.imagePaths,
   });
 
   DraftItem copyWith({
@@ -30,12 +34,14 @@ class DraftItem {
     Map<String, dynamic>? formData,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<String>? imagePaths,
   }) {
     return DraftItem(
       id: id ?? this.id,
       formData: formData ?? this.formData,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      imagePaths: imagePaths ?? this.imagePaths,
     );
   }
 
