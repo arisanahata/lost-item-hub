@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../providers/draft_provider.dart';
+import '../../../viewmodel/form_viewmodel.dart';
 import 'lost_item_form_screen.dart';
 
-class LostItemEditScreen extends HookConsumerWidget {
+class LostItemEditScreen extends ConsumerWidget {
   final String draftId;
 
   const LostItemEditScreen({
@@ -24,8 +24,16 @@ class LostItemEditScreen extends HookConsumerWidget {
           initialFormData: draft.formData,
         );
       },
-      error: (error, _) => Text('Error: $error'),
-      loading: () => const CircularProgressIndicator(),
+      error: (error, stack) => Scaffold(
+        body: Center(
+          child: Text('エラーが発生しました: $error'),
+        ),
+      ),
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
     );
   }
 }

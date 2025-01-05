@@ -37,6 +37,7 @@ mixin _$LostItem {
   String get itemDescription => throw _privateConstructorUsedError;
   bool get needsReceipt => throw _privateConstructorUsedError; // 現金情報
   bool get hasCash => throw _privateConstructorUsedError;
+  int get cash => throw _privateConstructorUsedError; // 合計金額
   int get yen10000 => throw _privateConstructorUsedError;
   int get yen5000 => throw _privateConstructorUsedError;
   int get yen2000 => throw _privateConstructorUsedError;
@@ -84,6 +85,7 @@ abstract class $LostItemCopyWith<$Res> {
       String itemDescription,
       bool needsReceipt,
       bool hasCash,
+      int cash,
       int yen10000,
       int yen5000,
       int yen2000,
@@ -131,6 +133,7 @@ class _$LostItemCopyWithImpl<$Res, $Val extends LostItem>
     Object? itemDescription = null,
     Object? needsReceipt = null,
     Object? hasCash = null,
+    Object? cash = null,
     Object? yen10000 = null,
     Object? yen5000 = null,
     Object? yen2000 = null,
@@ -214,6 +217,10 @@ class _$LostItemCopyWithImpl<$Res, $Val extends LostItem>
           ? _value.hasCash
           : hasCash // ignore: cast_nullable_to_non_nullable
               as bool,
+      cash: null == cash
+          ? _value.cash
+          : cash // ignore: cast_nullable_to_non_nullable
+              as int,
       yen10000: null == yen10000
           ? _value.yen10000
           : yen10000 // ignore: cast_nullable_to_non_nullable
@@ -296,6 +303,7 @@ abstract class _$$LostItemImplCopyWith<$Res>
       String itemDescription,
       bool needsReceipt,
       bool hasCash,
+      int cash,
       int yen10000,
       int yen5000,
       int yen2000,
@@ -341,6 +349,7 @@ class __$$LostItemImplCopyWithImpl<$Res>
     Object? itemDescription = null,
     Object? needsReceipt = null,
     Object? hasCash = null,
+    Object? cash = null,
     Object? yen10000 = null,
     Object? yen5000 = null,
     Object? yen2000 = null,
@@ -424,6 +433,10 @@ class __$$LostItemImplCopyWithImpl<$Res>
           ? _value.hasCash
           : hasCash // ignore: cast_nullable_to_non_nullable
               as bool,
+      cash: null == cash
+          ? _value.cash
+          : cash // ignore: cast_nullable_to_non_nullable
+              as int,
       yen10000: null == yen10000
           ? _value.yen10000
           : yen10000 // ignore: cast_nullable_to_non_nullable
@@ -501,6 +514,7 @@ class _$LostItemImpl implements _LostItem {
       required this.itemDescription,
       required this.needsReceipt,
       this.hasCash = false,
+      this.cash = 0,
       this.yen10000 = 0,
       this.yen5000 = 0,
       this.yen2000 = 0,
@@ -576,6 +590,10 @@ class _$LostItemImpl implements _LostItem {
   final bool hasCash;
   @override
   @JsonKey()
+  final int cash;
+// 合計金額
+  @override
+  @JsonKey()
   final int yen10000;
   @override
   @JsonKey()
@@ -615,7 +633,7 @@ class _$LostItemImpl implements _LostItem {
 
   @override
   String toString() {
-    return 'LostItem(id: $id, hasRightsWaiver: $hasRightsWaiver, hasConsentToDisclose: $hasConsentToDisclose, rightsOptions: $rightsOptions, finderName: $finderName, finderAddress: $finderAddress, finderPhone: $finderPhone, foundDate: $foundDate, foundTime: $foundTime, foundLocation: $foundLocation, routeName: $routeName, vehicleNumber: $vehicleNumber, imageUrls: $imageUrls, itemColor: $itemColor, itemDescription: $itemDescription, needsReceipt: $needsReceipt, hasCash: $hasCash, yen10000: $yen10000, yen5000: $yen5000, yen2000: $yen2000, yen1000: $yen1000, yen500: $yen500, yen100: $yen100, yen50: $yen50, yen10: $yen10, yen5: $yen5, yen1: $yen1, isDraft: $isDraft, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'LostItem(id: $id, hasRightsWaiver: $hasRightsWaiver, hasConsentToDisclose: $hasConsentToDisclose, rightsOptions: $rightsOptions, finderName: $finderName, finderAddress: $finderAddress, finderPhone: $finderPhone, foundDate: $foundDate, foundTime: $foundTime, foundLocation: $foundLocation, routeName: $routeName, vehicleNumber: $vehicleNumber, imageUrls: $imageUrls, itemColor: $itemColor, itemDescription: $itemDescription, needsReceipt: $needsReceipt, hasCash: $hasCash, cash: $cash, yen10000: $yen10000, yen5000: $yen5000, yen2000: $yen2000, yen1000: $yen1000, yen500: $yen500, yen100: $yen100, yen50: $yen50, yen10: $yen10, yen5: $yen5, yen1: $yen1, isDraft: $isDraft, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -655,6 +673,7 @@ class _$LostItemImpl implements _LostItem {
             (identical(other.needsReceipt, needsReceipt) ||
                 other.needsReceipt == needsReceipt) &&
             (identical(other.hasCash, hasCash) || other.hasCash == hasCash) &&
+            (identical(other.cash, cash) || other.cash == cash) &&
             (identical(other.yen10000, yen10000) ||
                 other.yen10000 == yen10000) &&
             (identical(other.yen5000, yen5000) || other.yen5000 == yen5000) &&
@@ -694,6 +713,7 @@ class _$LostItemImpl implements _LostItem {
         itemDescription,
         needsReceipt,
         hasCash,
+        cash,
         yen10000,
         yen5000,
         yen2000,
@@ -744,6 +764,7 @@ abstract class _LostItem implements LostItem {
       required final String itemDescription,
       required final bool needsReceipt,
       final bool hasCash,
+      final int cash,
       final int yen10000,
       final int yen5000,
       final int yen2000,
@@ -795,6 +816,8 @@ abstract class _LostItem implements LostItem {
   bool get needsReceipt; // 現金情報
   @override
   bool get hasCash;
+  @override
+  int get cash; // 合計金額
   @override
   int get yen10000;
   @override

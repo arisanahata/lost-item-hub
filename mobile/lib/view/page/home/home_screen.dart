@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../providers/draft_provider.dart';
-import 'lost_item_form_screen.dart';
-import 'lost_item_edit_screen.dart';
+
+import '../../../viewmodel/form_viewmodel.dart';
+import '../form/lost_item_form_screen.dart';
+import '../form/lost_item_edit_screen.dart';
 
 class HomeScreen extends HookConsumerWidget {
   const HomeScreen({super.key});
@@ -71,9 +72,11 @@ class HomeScreen extends HookConsumerWidget {
                     final itemName = formData['itemName'] as String? ?? '';
                     final foundDate = formData['foundDate'] as DateTime?;
                     final foundTime = formData['foundTime'] as DateTime?;
-                    final foundLocation = formData['foundLocation'] as String? ?? '';
+                    final foundLocation =
+                        formData['foundLocation'] as String? ?? '';
                     final routeName = formData['routeName'] as String? ?? '';
-                    final vehicleNumber = formData['vehicleNumber'] as String? ?? '';
+                    final vehicleNumber =
+                        formData['vehicleNumber'] as String? ?? '';
                     final itemFeatures = formData['features'] as String? ?? '';
 
                     String dateStr = foundDate != null
@@ -85,11 +88,13 @@ class HomeScreen extends HookConsumerWidget {
 
                     // 拾得場所のテキストを構築
                     List<String> locationParts = [];
-                    if (foundLocation.isNotEmpty)
+                    if (foundLocation.isNotEmpty) {
                       locationParts.add(foundLocation);
+                    }
                     if (routeName.isNotEmpty) locationParts.add(routeName);
-                    if (vehicleNumber.isNotEmpty)
+                    if (vehicleNumber.isNotEmpty) {
                       locationParts.add(vehicleNumber);
+                    }
                     final locationText = locationParts.join(' ');
 
                     return Dismissible(

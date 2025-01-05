@@ -1,10 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'draft_item.g.dart';
 
-@immutable
 @HiveType(typeId: 0)
 @JsonSerializable()
 class DraftItem {
