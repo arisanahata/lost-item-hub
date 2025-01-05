@@ -489,6 +489,9 @@ class LostItemFormScreen extends HookConsumerWidget {
               decoration: const InputDecoration(
                 labelText: '保持する権利の選択',
               ),
+              initialValue: isEditing && initialFormData != null
+                  ? (initialFormData!['rightsOptions'] as List<dynamic>).map((e) => e.toString()).toList()
+                  : [],
               options: const [
                 FormBuilderFieldOption(
                   value: 'expense',
@@ -924,21 +927,48 @@ class LostItemFormScreen extends HookConsumerWidget {
           print('=== 編集画面の初期データ ===');
           print('権利放棄: ${initialFormData!['hasRightsWaiver']}');
           print('権利オプション: ${initialFormData!['rightsOptions']}');
+          print('権利オプションの型: ${initialFormData!['rightsOptions']?.runtimeType}');
           print('==================');
 
           // 権利放棄の状態を設定
           final hasRightsWaiver = initialFormData!['hasRightsWaiver'] ?? true;
           showRightsOptions.value = !hasRightsWaiver;
 
-          // 権利関連の値を設定
-          final rightsOptions = (initialFormData!['rightsOptions'] as List?)?.cast<String>() ?? [];
-          
-          // フォームの値を設定
+          print('=== フォーム設定前の状態 ===');
+          print('showRightsOptions: ${showRightsOptions.value}');
+          print('hasRightsWaiver field: ${formKey.value.currentState?.fields['hasRightsWaiver']?.value}');
+          print('rightsOptions field: ${formKey.value.currentState?.fields['rightsOptions']?.value}');
+          print('==================');
+
+          // フォームの値を設定（権利オプション以外）
           formKey.value.currentState?.patchValue({
             ...initialFormData!,
             'hasRightsWaiver': hasRightsWaiver,
-            'rightsOptions': rightsOptions,
           });
+
+          print('=== patchValue後の状態 ===');
+          print('hasRightsWaiver field: ${formKey.value.currentState?.fields['hasRightsWaiver']?.value}');
+          print('rightsOptions field: ${formKey.value.currentState?.fields['rightsOptions']?.value}');
+          print('==================');
+
+          // 権利オプションを個別に設定
+          if (!hasRightsWaiver && initialFormData!['rightsOptions'] != null) {
+            // 既存の選択をクリア
+            formKey.value.currentState?.fields['rightsOptions']?.reset();
+            
+            // 新しい選択を設定
+            final options = (initialFormData!['rightsOptions'] as List).map((e) => e.toString()).toList();
+            print('=== 設定する権利オプション ===');
+            print('options: $options');
+            print('options type: ${options.runtimeType}');
+            print('==================');
+            
+            formKey.value.currentState?.fields['rightsOptions']?.didChange(options);
+
+            print('=== 権利オプション設定後の状態 ===');
+            print('rightsOptions field: ${formKey.value.currentState?.fields['rightsOptions']?.value}');
+            print('==================');
+          }
 
           // 現金の設定
           if (initialFormData!['cash'] != null) {
