@@ -59,7 +59,8 @@ class LostItem with _$LostItem {
       finderName: formData['finderName'] ?? '',
       finderAddress: formData['finderAddress'] ?? '',
       finderPhone: formData['finderPhone'] ?? '',
-      foundDate: DateTime.parse(formData['foundDate'] ?? DateTime.now().toIso8601String()),
+      foundDate: DateTime.parse(
+          formData['foundDate'] ?? DateTime.now().toIso8601String()),
       foundTime: formData['foundTime'] ?? '',
       foundLocation: formData['foundLocation'] ?? '',
       routeName: formData['routeName'] ?? '',

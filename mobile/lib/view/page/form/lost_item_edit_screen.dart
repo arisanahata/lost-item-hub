@@ -13,11 +13,22 @@ class LostItemEditScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final drafts = ref.watch(draftListProvider);
+    // 特定のドラフトを監視
+    final draftAsync = ref.watch(draftProvider(draftId));
+    // FormViewModelの状態も監視
+    final formState = ref.watch(formViewModelProvider);
 
-    return drafts.when(
-      data: (items) {
-        final draft = items.firstWhere((item) => item.id == draftId);
+    return draftAsync.when(
+      data: (draft) {
+        if (draft == null) {
+          // ドラフトが見つからない場合
+          return Scaffold(
+            body: Center(
+              child: Text('ドラフトが見つかりません: $draftId'),
+            ),
+          );
+        }
+
         return LostItemFormScreen(
           isEditing: true,
           draftId: draftId,

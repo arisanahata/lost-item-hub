@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../../../viewmodel/form_viewmodel.dart';
 import '../form/lost_item_form_screen.dart';
 import '../form/lost_item_edit_screen.dart';
@@ -135,16 +134,30 @@ class HomeScreen extends HookConsumerWidget {
                           ),
                         );
                       },
-                      onDismissed: (_) {
-                        ref
-                            .read(draftListProvider.notifier)
-                            .deleteDraft(item.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('下書きを削除しました'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                      onDismissed: (_) async {
+                        try {
+                          await ref
+                              .read(formViewModelProvider.notifier)
+                              .deleteDraft(item.id);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('下書きを削除しました'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('下書きの削除に失敗しました: $e'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       },
                       background: Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -343,49 +356,19 @@ class HomeScreen extends HookConsumerWidget {
         onPressed: () {
           Navigator.push(
             context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  const LostItemFormScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                const begin = Offset(1.0, 0.0);
-                const end = Offset.zero;
-                const curve = Curves.easeInOut;
-                var tween = Tween(begin: begin, end: end).chain(
-                  CurveTween(curve: curve),
-                );
-                return SlideTransition(
-                  position: animation.drive(tween),
-                  child: child,
-                );
-              },
-              transitionDuration: const Duration(milliseconds: 300),
-              reverseTransitionDuration: const Duration(milliseconds: 300),
+            MaterialPageRoute(
+              builder: (context) => const LostItemFormScreen(
+                isEditing: false,
+              ),
             ),
           );
         },
-        backgroundColor: const Color.fromARGB(255, 12, 51, 135),
-        elevation: 0,
-        label: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.add,
-                size: 28,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '新規作成',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-            ],
-          ),
+        icon: const Icon(Icons.add),
+        label: Text(
+          '新規登録',
+          style: GoogleFonts.notoSans(),
         ),
+        backgroundColor: Theme.of(context).primaryColor,
       ),
     );
   }

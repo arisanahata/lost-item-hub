@@ -4,20 +4,30 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'view/page/home/home_screen.dart';
 import 'model/draft_item.dart';
+import 'model/repository/item_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
-  await Hive.openBox('cash');
 
-  // Register adapter only if not already registered
+  // Hiveの初期化
+  await Hive.initFlutter();
+
+  // アダプターの登録（未登録の場合のみ）
   if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(DraftItemAdapter());
   }
 
+  // ItemRepositoryの初期化
+  final repository = ItemRepository();
+  await repository.init();
+
   runApp(
-    const ProviderScope(
-      child: MyApp(),
+    ProviderScope(
+      overrides: [
+        // ItemRepositoryの初期化済みインスタンスを提供
+        itemRepositoryProvider.overrideWithValue(repository),
+      ],
+      child: const MyApp(),
     ),
   );
 }
@@ -36,7 +46,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        scaffoldBackgroundColor: Colors.grey[500],
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.white,
           elevation: 0,
