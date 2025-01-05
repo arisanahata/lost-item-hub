@@ -5,12 +5,14 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive/hive.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lost_item_hub/features/lost_item/presentation/providers/draft_provider.dart';
 import 'package:expandable/expandable.dart';
+import '../../domain/entities/lost_item.dart';
 import 'home_screen.dart';
 import 'lost_item_confirm_screen.dart';
 
@@ -36,7 +38,8 @@ class LostItemFormScreen extends HookConsumerWidget {
     final scrollController = useScrollController();
     final isInteracting = useState(false);
     final filledFields = useState<Set<String>>({});
-    final totalAmount = useState(0);
+    final moneyControllers = useState<Map<String, TextEditingController>>({});
+    final totalAmount = useState<int>(0);
 
     // FocusNodeをuseMemoizedで作成
     final nodes = useMemoized(() {
@@ -60,73 +63,102 @@ class LostItemFormScreen extends HookConsumerWidget {
       };
     }, const []);
 
-    // TextEditingControllerをuseEffectで管理
-    final controllers = useState<Map<String, TextEditingController>>({});
+    // 合計金額の計算
+    void calculateTotalAmount() {
+      int sum = 0;
+      final denominations = [
+        '10000',
+        '5000',
+        '2000',
+        '1000',
+        '500',
+        '100',
+        '50',
+        '10',
+        '5',
+        '1'
+      ];
+      for (var d in denominations) {
+        final count =
+            int.tryParse(moneyControllers.value['yen$d']?.text ?? '0') ?? 0;
+        sum += count * int.parse(d);
+      }
+      totalAmount.value = sum;
+    }
+
+    // 金額入力の処理
+    void handleMoneyInput(String denomination, String? value) {
+      final controller = moneyControllers.value['yen$denomination']!;
+
+      if (value == null || value.isEmpty) {
+        controller.text = '0';
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: 1),
+        );
+      } else {
+        String newValue = value.replaceAll(RegExp(r'[^0-9]'), '');
+        if (newValue.startsWith('0') && newValue.length > 1) {
+          newValue = newValue.substring(1);
+        }
+        controller.text = newValue;
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: newValue.length),
+        );
+      }
+
+      // フォームの値を更新
+      formKey.value.currentState?.fields['yen$denomination']
+          ?.didChange(controller.text);
+
+      // 合計金額を計算
+      calculateTotalAmount();
+    }
 
     useEffect(() {
-      // 各金額入力用のcontrollerを初期化
-      final newControllers = {
-        'yen10000': TextEditingController(text: initialFormData?['yen10000']?.toString() ?? ''),
-        'yen5000': TextEditingController(text: initialFormData?['yen5000']?.toString() ?? ''),
-        'yen2000': TextEditingController(text: initialFormData?['yen2000']?.toString() ?? ''),
-        'yen1000': TextEditingController(text: initialFormData?['yen1000']?.toString() ?? ''),
-        'yen500': TextEditingController(text: initialFormData?['yen500']?.toString() ?? ''),
-        'yen100': TextEditingController(text: initialFormData?['yen100']?.toString() ?? ''),
-        'yen50': TextEditingController(text: initialFormData?['yen50']?.toString() ?? ''),
-        'yen10': TextEditingController(text: initialFormData?['yen10']?.toString() ?? ''),
-        'yen5': TextEditingController(text: initialFormData?['yen5']?.toString() ?? ''),
-        'yen1': TextEditingController(text: initialFormData?['yen1']?.toString() ?? ''),
+      // 金額入力フィールドのコントローラーを初期化
+      final denominations = [
+        '10000',
+        '5000',
+        '2000',
+        '1000',
+        '500',
+        '100',
+        '50',
+        '10',
+        '5',
+        '1'
+      ];
+      final controllers = {
+        for (var d in denominations)
+          'yen$d': TextEditingController(
+              text: isEditing && initialFormData != null
+                  ? (initialFormData!['yen$d']?.toString() ?? '0')
+                  : '0')
       };
-      controllers.value = newControllers;
+      moneyControllers.value = controllers;
+
+      // 初期の合計金額を計算
+      if (isEditing && initialFormData != null) {
+        calculateTotalAmount();
+      }
 
       return () {
-        // controllersの破棄
-        for (final controller in controllers.value.values) {
+        for (var controller in moneyControllers.value.values) {
           controller.dispose();
         }
       };
     }, []);
 
-    // 初期値の設定
-    useEffect(() {
-      if (isEditing && initialFormData != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          formKey.value.currentState?.patchValue({
-            'hasRightsWaiver': initialFormData!['hasRightsWaiver'] ?? true,
-            'hasConsentToDisclose': initialFormData!['hasConsentToDisclose'] ?? true,
-            'rightsOptions': initialFormData!['rightsOptions'] ?? [],
-            'needsReceipt': initialFormData!['needsReceipt'] ?? false,
-            'foundDate': initialFormData!['foundDate'],
-            'foundTime': initialFormData!['foundTime'],
-            ...initialFormData!,
-          });
-        });
-      }
-      return null;
-    }, [initialFormData]);
-
     // フォームの値が変更されたときの処理
     void onFieldChanged(String fieldName, dynamic value) {
-      if (value != null) {
-        filledFields.value = {...filledFields.value, fieldName};
-      } else {
-        final newFilledFields = {...filledFields.value}..remove(fieldName);
-        filledFields.value = newFilledFields;
-      }
-
       if (fieldName == 'hasRightsWaiver') {
-        showRightsOptions.value = value == false;
+        showRightsOptions.value = !value;
       }
     }
 
     // 現金入力の制御
     void handleCashInput(String? value) {
       if (value == null || value.isEmpty) {
-        controllers.value['cash']!.text = '0';
-        controllers.value['cash']!.selection = TextSelection.fromPosition(
-          TextPosition(offset: controllers.value['cash']!.text.length),
-        );
-        onFieldChanged('cash', '0');
         return;
       }
 
@@ -137,11 +169,6 @@ class LostItemFormScreen extends HookConsumerWidget {
       while (newValue.startsWith('0') && newValue.length > 1) {
         newValue = newValue.substring(1);
       }
-
-      controllers.value['cash']!.text = newValue;
-      controllers.value['cash']!.selection = TextSelection.fromPosition(
-        TextPosition(offset: newValue.length),
-      );
 
       // フォームの値を更新
       onFieldChanged('cash', newValue);
@@ -169,35 +196,7 @@ class LostItemFormScreen extends HookConsumerWidget {
       }
     }
 
-    void calculateTotalAmount(FormBuilderState? formState) {
-      if (formState == null) return;
-
-      final denominations = [
-        'yen10000',
-        'yen5000',
-        'yen2000',
-        'yen1000',
-        'yen500',
-        'yen100',
-        'yen50',
-        'yen10',
-        'yen5',
-        'yen1'
-      ];
-
-      final values = [10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
-
-      int total = 0;
-      for (int i = 0; i < denominations.length; i++) {
-        final count =
-            int.tryParse(formState.fields[denominations[i]]?.value ?? '0') ?? 0;
-        total += count * values[i];
-      }
-
-      totalAmount.value = total;
-    }
-
-    Widget _buildCashInput(String name, String label, int value,
+    Widget _buildCashInput(String denomination, String label, int value,
         void Function(String?) onChanged) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8.0),
@@ -205,28 +204,28 @@ class LostItemFormScreen extends HookConsumerWidget {
           children: [
             Expanded(
               flex: 2,
-              child: FormBuilderTextField(
-                name: name,
+              child: TextFormField(
+                controller: moneyControllers.value['yen$denomination'],
                 decoration: InputDecoration(
-                  labelText: label,
+                  labelText: '$denomination円',
                   labelStyle: GoogleFonts.notoSans(fontSize: 16),
                   filled: true,
                   fillColor: Colors.white,
                   suffixText: '枚',
                   border: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8))),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
                   enabledBorder: OutlineInputBorder(
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(8)),
-                      borderSide: BorderSide(color: Colors.grey[300]!)),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
                   focusedBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                      borderSide: BorderSide(color: Color(0xFF1a56db))),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                    borderSide: BorderSide(color: Color(0xFF1a56db)),
+                  ),
                 ),
                 keyboardType: TextInputType.number,
-                controller: controllers.value[name],
-                onChanged: onChanged,
-                valueTransformer: (value) => int.tryParse(value ?? '0') ?? 0,
+                onChanged: (value) => handleMoneyInput(denomination, value),
               ),
             ),
             const SizedBox(width: 8),
@@ -234,16 +233,15 @@ class LostItemFormScreen extends HookConsumerWidget {
               flex: 1,
               child: Builder(
                 builder: (context) {
-                  final count = int.tryParse(FormBuilder.of(context)
-                              ?.fields[name]
-                              ?.value
-                              ?.toString() ??
-                          '0') ??
+                  final count = int.tryParse(
+                          moneyControllers.value['yen$denomination']?.text ??
+                              '0') ??
                       0;
                   final amount = count * value;
                   return Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
                       color: amount > 0 ? Colors.blue[50] : Colors.grey[50],
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -305,7 +303,7 @@ class LostItemFormScreen extends HookConsumerWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    '¥${NumberFormat('#,###').format(totalAmount.value)}',
+                    '${totalAmount.value}円',
                     style: GoogleFonts.notoSans(
                         color: const Color(0xFF1a56db),
                         fontWeight: FontWeight.bold),
@@ -324,31 +322,31 @@ class LostItemFormScreen extends HookConsumerWidget {
           ),
           child: Column(
             children: [
-              _buildCashInput('yen10000', '10,000円札', 10000,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen5000', '5,000円札', 5000,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen2000', '2,000円札', 2000,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen1000', '1,000円札', 1000,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen500', '500円玉', 500,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen100', '100円玉', 100,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen50', '50円玉', 50,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen10', '10円玉', 10,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen5', '5円玉', 5,
-                  (value) => calculateTotalAmount(formKey.currentState)),
-              _buildCashInput('yen1', '1円玉', 1,
-                  (value) => calculateTotalAmount(formKey.currentState)),
+              _buildCashInput('10000', '10,000円札', 10000,
+                  (value) => handleMoneyInput('10000', value)),
+              _buildCashInput('5000', '5,000円札', 5000,
+                  (value) => handleMoneyInput('5000', value)),
+              _buildCashInput('2000', '2,000円札', 2000,
+                  (value) => handleMoneyInput('2000', value)),
+              _buildCashInput('1000', '1,000円札', 1000,
+                  (value) => handleMoneyInput('1000', value)),
+              _buildCashInput('500', '500円玉', 500,
+                  (value) => handleMoneyInput('500', value)),
+              _buildCashInput('100', '100円玉', 100,
+                  (value) => handleMoneyInput('100', value)),
+              _buildCashInput(
+                  '50', '50円玉', 50, (value) => handleMoneyInput('50', value)),
+              _buildCashInput(
+                  '10', '10円玉', 10, (value) => handleMoneyInput('10', value)),
+              _buildCashInput(
+                  '5', '5円玉', 5, (value) => handleMoneyInput('5', value)),
+              _buildCashInput(
+                  '1', '1円玉', 1, (value) => handleMoneyInput('1', value)),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.grey[300]!),
                 ),
@@ -358,14 +356,17 @@ class LostItemFormScreen extends HookConsumerWidget {
                     Text(
                       '合計金額',
                       style: GoogleFonts.notoSans(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
-                      '¥${NumberFormat('#,###').format(totalAmount.value)}',
+                      '${totalAmount.value}円',
                       style: GoogleFonts.notoSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1a56db)),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1a56db),
+                      ),
                     ),
                   ],
                 ),
@@ -467,24 +468,33 @@ class LostItemFormScreen extends HookConsumerWidget {
               FormBuilderFieldOption(value: false, child: Text('権利を保持する')),
             ],
             onChanged: (value) {
-              showRightsOptions.value = value == false;
               onFieldChanged('hasRightsWaiver', value);
             },
             activeColor: const Color.fromARGB(255, 12, 51, 135),
           ),
           if (showRightsOptions.value) ...[
             const SizedBox(height: 16),
-            FormBuilderCheckboxGroup(
+            FormBuilderCheckboxGroup<String>(
               name: 'rightsOptions',
               decoration: const InputDecoration(
                 labelText: '保持する権利の選択',
               ),
               options: const [
-                FormBuilderFieldOption(value: 'expense', child: Text('費用請求権')),
-                FormBuilderFieldOption(value: 'reward', child: Text('報労金')),
-                FormBuilderFieldOption(value: 'ownership', child: Text('所有権')),
+                FormBuilderFieldOption(
+                  value: 'expense',
+                  child: Text('費用請求権'),
+                ),
+                FormBuilderFieldOption(
+                  value: 'reward',
+                  child: Text('報労金請求権'),
+                ),
+                FormBuilderFieldOption(
+                  value: 'ownership',
+                  child: Text('所有権'),
+                ),
               ],
-              activeColor: const Color.fromARGB(255, 12, 51, 135),
+              enabled: true,
+              onChanged: (value) => onFieldChanged('rightsOptions', value),
             ),
             const SizedBox(height: 16),
             FormBuilderRadioGroup(
@@ -906,6 +916,30 @@ class LostItemFormScreen extends HookConsumerWidget {
       };
     }, const []);
 
+    useEffect(() {
+      if (isEditing && initialFormData != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          formKey.value.currentState?.patchValue({
+            'foundDate': initialFormData!['foundDate'] as DateTime?,
+            'foundTime': initialFormData!['foundTime'] as DateTime?,
+            'hasRightsWaiver': initialFormData!['hasRightsWaiver'] ?? true,
+            'hasConsentToDisclose':
+                initialFormData!['hasConsentToDisclose'] ?? true,
+            'rightsOptions': initialFormData!['rightsOptions'] ?? [],
+            'needsReceipt': initialFormData!['needsReceipt'] ?? false,
+            'itemColor': initialFormData!['itemColor'] ?? '',
+            'itemDescription': initialFormData!['itemDescription'] ?? '',
+            ...initialFormData!,
+          });
+
+          // 権利放棄の状態を設定
+          showRightsOptions.value =
+              !(initialFormData!['hasRightsWaiver'] ?? true);
+        });
+      }
+      return null;
+    }, [initialFormData]);
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -929,23 +963,23 @@ class LostItemFormScreen extends HookConsumerWidget {
         onTap: () => FocusScope.of(context).unfocus(),
         child: FormBuilder(
           key: formKey.value,
-          child: ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildRightsWaiverSection(),
-              const SizedBox(height: 16),
-              _buildFinderInfoSection(),
-              const SizedBox(height: 16),
-              _buildFoundInfoSection(),
-              const SizedBox(height: 16),
-              _buildLocationSection(),
-              const SizedBox(height: 16),
-              _buildItemInfoSection(),
-              const SizedBox(height: 16),
-              _buildImageSection(),
-              const SizedBox(height: 32),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildRightsWaiverSection(),
+                const SizedBox(height: 16),
+                _buildFinderInfoSection(),
+                const SizedBox(height: 16),
+                _buildFoundInfoSection(),
+                const SizedBox(height: 16),
+                _buildLocationSection(),
+                const SizedBox(height: 16),
+                _buildItemInfoSection(),
+                const SizedBox(height: 16),
+                _buildImageSection(),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
@@ -954,48 +988,59 @@ class LostItemFormScreen extends HookConsumerWidget {
         child: Row(
           children: [
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  final formState = formKey.value.currentState;
-                  if (formState != null && formState.saveAndValidate()) {
-                    final formData = formState.value;
-                    print('=== フォームデータ ===');
-                    print('権利放棄: ${formData['hasRightsWaiver']}');
-                    print('氏名公表: ${formData['hasNameDisclosure']}');
-                    print('現金: ${formData['cash']}');
-                    print('日時: ${formData['foundDate']}, ${formData['foundTime']}');
-                    print('その他のデータ: $formData');
-                    print('==================');
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (formKey.value.currentState?.saveAndValidate() ?? false) {
+                    final formData = formKey.value.currentState!.value;
+                    // 合計金額を追加
+                    formData['cash'] = totalAmount.value;
 
-                    ref
-                        .read(draftListProvider.notifier)
-                        .saveDraft(formData, draftId: draftId)
-                        .then((_) {
+                    // 下書きとして保存
+                    final draft = LostItem.fromJson(formData);
+                    final box = Hive.box<LostItem>('drafts');
+                    if (isEditing && draftId != null) {
+                      await box.put(draftId, draft);
+                    } else {
+                      await box.add(draft);
+                    }
+
+                    // 保存完了メッセージを表示
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(isEditing ? '上書き保存しました' : '下書きを保存しました'),
-                          behavior: SnackBarBehavior.floating,
+                        const SnackBar(
+                          content: Text('下書き保存されました'),
+                          duration: Duration(seconds: 2),
                         ),
                       );
-                      Navigator.pop(context);
-                    });
+
+                      // ホーム画面に遷移
+                      Future.delayed(const Duration(seconds: 1), () {
+                        if (context.mounted) {
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const HomeScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      });
+                    }
                   }
                 },
-                icon: const Icon(Icons.save_outlined,
-                    size: 24, color: Colors.white),
-                label: Text(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[200],
+                  foregroundColor: Colors.grey[800],
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
                   '下書き保存',
                   style: GoogleFonts.notoSans(
                     fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 223, 170, 36),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
