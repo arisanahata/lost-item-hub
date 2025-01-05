@@ -10,6 +10,7 @@ class LostItem with _$LostItem {
     // 権利関係
     required bool hasRightsWaiver,
     required bool hasConsentToDisclose,
+    @Default([]) List<String> rightsOptions,
     
     // 拾得者情報
     required String finderName,

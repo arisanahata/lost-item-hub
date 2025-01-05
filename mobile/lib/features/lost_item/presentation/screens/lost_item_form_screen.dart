@@ -921,26 +921,40 @@ class LostItemFormScreen extends HookConsumerWidget {
     useEffect(() {
       if (isEditing && initialFormData != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          // まず全データを設定
-          formKey.value.currentState?.patchValue({
-            ...initialFormData!,
-          });
+          print('=== 編集画面の初期データ ===');
+          print('権利放棄: ${initialFormData!['hasRightsWaiver']}');
+          print('権利オプション: ${initialFormData!['rightsOptions']}');
+          print('==================');
 
           // 権利放棄の状態を設定
           final hasRightsWaiver = initialFormData!['hasRightsWaiver'] ?? true;
           showRightsOptions.value = !hasRightsWaiver;
 
-          // 権利関連の値を上書き設定（List<dynamic>をList<String>に変換）
-          final rightsOptions =
-              (initialFormData!['rightsOptions'] as List<dynamic>?)
-                      ?.map((e) => e.toString())
-                      .toList() ??
-                  [];
+          // 権利関連の値を設定
+          final rightsOptions = (initialFormData!['rightsOptions'] as List?)?.cast<String>() ?? [];
+          
+          // フォームの値を設定
+          formKey.value.currentState?.patchValue({
+            ...initialFormData!,
+            'hasRightsWaiver': hasRightsWaiver,
+            'rightsOptions': rightsOptions,
+          });
 
-          formKey.value.currentState?.fields['hasRightsWaiver']
-              ?.didChange(hasRightsWaiver);
-          formKey.value.currentState?.fields['rightsOptions']
-              ?.didChange(rightsOptions);
+          // 現金の設定
+          if (initialFormData!['cash'] != null) {
+            int remainingAmount = initialFormData!['cash'] as int;
+            final denominations = [10000, 5000, 2000, 1000, 500, 100, 50, 10, 5, 1];
+            
+            for (var denom in denominations) {
+              if (remainingAmount >= denom) {
+                final count = remainingAmount ~/ denom;
+                remainingAmount = remainingAmount % denom;
+                moneyControllers.value['yen$denom']?.text = count.toString();
+              }
+            }
+            // 合計金額を更新
+            calculateTotalAmount();
+          }
         });
       }
       return null;
@@ -1029,12 +1043,13 @@ class LostItemFormScreen extends HookConsumerWidget {
                           final messenger = ScaffoldMessenger.of(context);
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text(isEditing ? '上書き保存しました' : '下書き保存しました'),
+                              content:
+                                  Text(isEditing ? '上書き保存しました' : '下書き保存しました'),
                               behavior: SnackBarBehavior.floating,
                               duration: const Duration(seconds: 2),
                             ),
                           );
-                          
+
                           // 少し遅延させてから画面遷移
                           Future.delayed(const Duration(milliseconds: 500), () {
                             if (context.mounted) {

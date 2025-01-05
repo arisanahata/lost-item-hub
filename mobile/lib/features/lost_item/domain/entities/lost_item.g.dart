@@ -11,6 +11,10 @@ _$LostItemImpl _$$LostItemImplFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String?,
       hasRightsWaiver: json['hasRightsWaiver'] as bool,
       hasConsentToDisclose: json['hasConsentToDisclose'] as bool,
+      rightsOptions: (json['rightsOptions'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       finderName: json['finderName'] as String,
       finderAddress: json['finderAddress'] as String,
       finderPhone: json['finderPhone'] as String,
@@ -50,6 +54,7 @@ Map<String, dynamic> _$$LostItemImplToJson(_$LostItemImpl instance) =>
       'id': instance.id,
       'hasRightsWaiver': instance.hasRightsWaiver,
       'hasConsentToDisclose': instance.hasConsentToDisclose,
+      'rightsOptions': instance.rightsOptions,
       'finderName': instance.finderName,
       'finderAddress': instance.finderAddress,
       'finderPhone': instance.finderPhone,

@@ -22,7 +22,8 @@ LostItem _$LostItemFromJson(Map<String, dynamic> json) {
 mixin _$LostItem {
   String? get id => throw _privateConstructorUsedError; // 権利関係
   bool get hasRightsWaiver => throw _privateConstructorUsedError;
-  bool get hasConsentToDisclose => throw _privateConstructorUsedError; // 拾得者情報
+  bool get hasConsentToDisclose => throw _privateConstructorUsedError;
+  List<String> get rightsOptions => throw _privateConstructorUsedError; // 拾得者情報
   String get finderName => throw _privateConstructorUsedError;
   String get finderAddress => throw _privateConstructorUsedError;
   String get finderPhone => throw _privateConstructorUsedError; // 基本情報
@@ -69,6 +70,7 @@ abstract class $LostItemCopyWith<$Res> {
       {String? id,
       bool hasRightsWaiver,
       bool hasConsentToDisclose,
+      List<String> rightsOptions,
       String finderName,
       String finderAddress,
       String finderPhone,
@@ -115,6 +117,7 @@ class _$LostItemCopyWithImpl<$Res, $Val extends LostItem>
     Object? id = freezed,
     Object? hasRightsWaiver = null,
     Object? hasConsentToDisclose = null,
+    Object? rightsOptions = null,
     Object? finderName = null,
     Object? finderAddress = null,
     Object? finderPhone = null,
@@ -155,6 +158,10 @@ class _$LostItemCopyWithImpl<$Res, $Val extends LostItem>
           ? _value.hasConsentToDisclose
           : hasConsentToDisclose // ignore: cast_nullable_to_non_nullable
               as bool,
+      rightsOptions: null == rightsOptions
+          ? _value.rightsOptions
+          : rightsOptions // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       finderName: null == finderName
           ? _value.finderName
           : finderName // ignore: cast_nullable_to_non_nullable
@@ -275,6 +282,7 @@ abstract class _$$LostItemImplCopyWith<$Res>
       {String? id,
       bool hasRightsWaiver,
       bool hasConsentToDisclose,
+      List<String> rightsOptions,
       String finderName,
       String finderAddress,
       String finderPhone,
@@ -319,6 +327,7 @@ class __$$LostItemImplCopyWithImpl<$Res>
     Object? id = freezed,
     Object? hasRightsWaiver = null,
     Object? hasConsentToDisclose = null,
+    Object? rightsOptions = null,
     Object? finderName = null,
     Object? finderAddress = null,
     Object? finderPhone = null,
@@ -359,6 +368,10 @@ class __$$LostItemImplCopyWithImpl<$Res>
           ? _value.hasConsentToDisclose
           : hasConsentToDisclose // ignore: cast_nullable_to_non_nullable
               as bool,
+      rightsOptions: null == rightsOptions
+          ? _value._rightsOptions
+          : rightsOptions // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       finderName: null == finderName
           ? _value.finderName
           : finderName // ignore: cast_nullable_to_non_nullable
@@ -474,6 +487,7 @@ class _$LostItemImpl implements _LostItem {
       {this.id,
       required this.hasRightsWaiver,
       required this.hasConsentToDisclose,
+      final List<String> rightsOptions = const [],
       required this.finderName,
       required this.finderAddress,
       required this.finderPhone,
@@ -500,7 +514,8 @@ class _$LostItemImpl implements _LostItem {
       this.isDraft = false,
       this.createdAt,
       this.updatedAt})
-      : _imageUrls = imageUrls;
+      : _rightsOptions = rightsOptions,
+        _imageUrls = imageUrls;
 
   factory _$LostItemImpl.fromJson(Map<String, dynamic> json) =>
       _$$LostItemImplFromJson(json);
@@ -512,6 +527,15 @@ class _$LostItemImpl implements _LostItem {
   final bool hasRightsWaiver;
   @override
   final bool hasConsentToDisclose;
+  final List<String> _rightsOptions;
+  @override
+  @JsonKey()
+  List<String> get rightsOptions {
+    if (_rightsOptions is EqualUnmodifiableListView) return _rightsOptions;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_rightsOptions);
+  }
+
 // 拾得者情報
   @override
   final String finderName;
@@ -591,7 +615,7 @@ class _$LostItemImpl implements _LostItem {
 
   @override
   String toString() {
-    return 'LostItem(id: $id, hasRightsWaiver: $hasRightsWaiver, hasConsentToDisclose: $hasConsentToDisclose, finderName: $finderName, finderAddress: $finderAddress, finderPhone: $finderPhone, foundDate: $foundDate, foundTime: $foundTime, foundLocation: $foundLocation, routeName: $routeName, vehicleNumber: $vehicleNumber, imageUrls: $imageUrls, itemColor: $itemColor, itemDescription: $itemDescription, needsReceipt: $needsReceipt, hasCash: $hasCash, yen10000: $yen10000, yen5000: $yen5000, yen2000: $yen2000, yen1000: $yen1000, yen500: $yen500, yen100: $yen100, yen50: $yen50, yen10: $yen10, yen5: $yen5, yen1: $yen1, isDraft: $isDraft, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'LostItem(id: $id, hasRightsWaiver: $hasRightsWaiver, hasConsentToDisclose: $hasConsentToDisclose, rightsOptions: $rightsOptions, finderName: $finderName, finderAddress: $finderAddress, finderPhone: $finderPhone, foundDate: $foundDate, foundTime: $foundTime, foundLocation: $foundLocation, routeName: $routeName, vehicleNumber: $vehicleNumber, imageUrls: $imageUrls, itemColor: $itemColor, itemDescription: $itemDescription, needsReceipt: $needsReceipt, hasCash: $hasCash, yen10000: $yen10000, yen5000: $yen5000, yen2000: $yen2000, yen1000: $yen1000, yen500: $yen500, yen100: $yen100, yen50: $yen50, yen10: $yen10, yen5: $yen5, yen1: $yen1, isDraft: $isDraft, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -604,6 +628,8 @@ class _$LostItemImpl implements _LostItem {
                 other.hasRightsWaiver == hasRightsWaiver) &&
             (identical(other.hasConsentToDisclose, hasConsentToDisclose) ||
                 other.hasConsentToDisclose == hasConsentToDisclose) &&
+            const DeepCollectionEquality()
+                .equals(other._rightsOptions, _rightsOptions) &&
             (identical(other.finderName, finderName) ||
                 other.finderName == finderName) &&
             (identical(other.finderAddress, finderAddress) ||
@@ -654,6 +680,7 @@ class _$LostItemImpl implements _LostItem {
         id,
         hasRightsWaiver,
         hasConsentToDisclose,
+        const DeepCollectionEquality().hash(_rightsOptions),
         finderName,
         finderAddress,
         finderPhone,
@@ -703,6 +730,7 @@ abstract class _LostItem implements LostItem {
       {final String? id,
       required final bool hasRightsWaiver,
       required final bool hasConsentToDisclose,
+      final List<String> rightsOptions,
       required final String finderName,
       required final String finderAddress,
       required final String finderPhone,
@@ -738,7 +766,9 @@ abstract class _LostItem implements LostItem {
   @override
   bool get hasRightsWaiver;
   @override
-  bool get hasConsentToDisclose; // 拾得者情報
+  bool get hasConsentToDisclose;
+  @override
+  List<String> get rightsOptions; // 拾得者情報
   @override
   String get finderName;
   @override
