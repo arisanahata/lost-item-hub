@@ -32,7 +32,7 @@ class LostItemFormScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final formKey = useRef(GlobalKey<FormBuilderState>());
+    final formKey = useState(GlobalKey<FormBuilderState>());
     final isSaving = useState(false);
     final totalAmount = useState(0);
     final selectedImages = useState<List<XFile>>([]);
@@ -127,24 +127,30 @@ class LostItemFormScreen extends HookConsumerWidget {
       };
     }, [nodes]);
 
-    // 保存済みの画像を読み込む
+    // 初期データの読み込み
     useEffect(() {
-      if (initialFormData != null && initialFormData!['images'] != null) {
-        final List<dynamic> paths =
-            initialFormData!['images']! as List<dynamic>;
-        final List<String> imagePaths = paths.map((e) => e.toString()).toList();
-        storedImages.value = imagePaths
-            .map((imagePath) => StoredImage(
-                  id: imagePath,
-                  fileName: imagePath,
-                  bytes: Uint8List(0),
-                  createdAt: DateTime.now(),
-                ))
-            .toList();
-        print('  保存済みの画像を読み込み: ${storedImages.value.length}枚');
+      if (initialFormData != null) {
+        // 画像の読み込み
+        if (initialFormData!['images'] != null) {
+          final List<dynamic> paths =
+              initialFormData!['images']! as List<dynamic>;
+          final List<String> imagePaths = paths.map((e) => e.toString()).toList();
+          storedImages.value = imagePaths
+              .map((imagePath) => StoredImage(
+                    id: imagePath,
+                    fileName: imagePath,
+                    bytes: Uint8List(0),
+                    createdAt: DateTime.now(),
+                  ))
+              .toList();
+          print('  保存済みの画像を読み込み: ${storedImages.value.length}枚');
+        }
+
+        // フォームデータの読み込み
+        formKey.value.currentState?.patchValue(initialFormData!);
       }
       return null;
-    }, []);
+    }, [initialFormData]);
 
     void onFieldChanged(String fieldName, dynamic value) {
       print('LostItemFormScreen - フィールドが変更されました:');
@@ -200,6 +206,30 @@ class LostItemFormScreen extends HookConsumerWidget {
         } else {
           formData.remove('cash');
           print('    現金データを削除');
+        }
+
+        // 画像データの処理
+        print('\n  画像データの処理:');
+        print('    選択された画像: ${selectedImages.value.length}枚');
+        print('    保存済みの画像: ${storedImages.value.length}枚');
+
+        // 画像データの配列を作成
+        final List<String> imagePaths = [];
+
+        // 保存済みの画像のパスを保存
+        for (var image in storedImages.value) {
+          imagePaths.add(image.fileName);
+        }
+
+        // 選択された画像のパスを保存
+        for (var image in selectedImages.value) {
+          imagePaths.add(image.path);
+        }
+
+        if (imagePaths.isNotEmpty) {
+          formData['images'] = imagePaths;
+          print('    保存する画像: ${imagePaths.length}枚');
+          print('    画像パス: $imagePaths');
         }
 
         print('=== 保存するフォームデータ ===');

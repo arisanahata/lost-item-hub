@@ -67,6 +67,14 @@ class FormViewModel extends StateNotifier<AsyncValue<void>> {
         print('  画像を保存');
         savedImageIds = [];
         for (var path in imagePaths) {
+          // 既存の画像IDの場合はそのまま追加
+          if (!path.startsWith('/')) {
+            savedImageIds.add(path);
+            print('  既存の画像を追加: $path');
+            continue;
+          }
+
+          // 新しい画像の場合はファイルを保存
           final file = File(path);
           if (await file.exists()) {
             final bytes = await file.readAsBytes();
@@ -74,7 +82,7 @@ class FormViewModel extends StateNotifier<AsyncValue<void>> {
             final savedImage =
                 await _imageRepository.saveImage(bytes, fileName);
             savedImageIds.add(savedImage.id);
-            print('  画像を保存: ${savedImage.id}');
+            print('  新しい画像を保存: ${savedImage.id}');
           } else {
             print('  画像ファイルが存在しません: $path');
           }
@@ -129,6 +137,14 @@ class FormViewModel extends StateNotifier<AsyncValue<void>> {
         print('  画像を保存');
         savedImageIds = [];
         for (var path in imagePaths) {
+          // 既存の画像IDの場合はそのまま追加
+          if (!path.startsWith('/')) {
+            savedImageIds.add(path);
+            print('  既存の画像を追加: $path');
+            continue;
+          }
+
+          // 新しい画像の場合はファイルを保存
           final file = File(path);
           if (await file.exists()) {
             final bytes = await file.readAsBytes();
@@ -136,7 +152,7 @@ class FormViewModel extends StateNotifier<AsyncValue<void>> {
             final savedImage =
                 await _imageRepository.saveImage(bytes, fileName);
             savedImageIds.add(savedImage.id);
-            print('  画像を保存: ${savedImage.id}');
+            print('  新しい画像を保存: ${savedImage.id}');
           } else {
             print('  画像ファイルが存在しません: $path');
           }
