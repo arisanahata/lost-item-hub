@@ -185,6 +185,13 @@ class ImageSection extends HookConsumerWidget {
                             height: 100,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                               image: DecorationImage(
                                 image: MemoryImage(Uint8List.fromList(snapshot.data!.bytes)),
                                 fit: BoxFit.cover,
@@ -258,6 +265,13 @@ class ImageSection extends HookConsumerWidget {
                             height: 100,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                               image: DecorationImage(
                                 image: MemoryImage(snapshot.data!),
                                 fit: BoxFit.cover,

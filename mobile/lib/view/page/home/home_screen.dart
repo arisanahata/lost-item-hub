@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../model/repository/image_repository.dart';
+import '../../../model/stored_image.dart';
 import '../../../viewmodel/form_viewmodel.dart';
 import '../form/lost_item_form_screen.dart';
 import '../form/lost_item_edit_screen.dart';
@@ -206,26 +209,57 @@ class HomeScreen extends HookConsumerWidget {
                                     child: // サムネイル画像
                                         item.imagePaths != null &&
                                                 item.imagePaths!.isNotEmpty
-                                            ? Container(
-                                                width: 100,
-                                                height: 100,
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black
-                                                          .withOpacity(0.1),
-                                                      blurRadius: 8,
-                                                      offset: const Offset(0, 2),
+                                            ? FutureBuilder<StoredImage?>(
+                                                future: ref
+                                                    .read(
+                                                        imageRepositoryProvider)
+                                                    .getImage(
+                                                        item.imagePaths!.first),
+                                                builder: (context, snapshot) {
+                                                  if (snapshot.connectionState ==
+                                                          ConnectionState
+                                                              .waiting ||
+                                                      !snapshot.hasData) {
+                                                    return Container(
+                                                      width: 100,
+                                                      height: 100,
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(12),
+                                                        color: Colors.grey[100],
+                                                      ),
+                                                      child:
+                                                          const CircularProgressIndicator(),
+                                                    );
+                                                  }
+
+                                                  return Container(
+                                                    width: 100,
+                                                    height: 100,
+                                                    decoration: BoxDecoration(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black
+                                                              .withOpacity(0.1),
+                                                          blurRadius: 8,
+                                                          offset: const Offset(
+                                                              0, 2),
+                                                        ),
+                                                      ],
+                                                      image: DecorationImage(
+                                                        image: MemoryImage(
+                                                            Uint8List.fromList(
+                                                                snapshot.data!
+                                                                    .bytes)),
+                                                        fit: BoxFit.cover,
+                                                      ),
                                                     ),
-                                                  ],
-                                                  image: DecorationImage(
-                                                    image: FileImage(File(
-                                                        item.imagePaths!.first)),
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                                ),
+                                                  );
+                                                },
                                               )
                                             : Container(
                                                 width: 100,
@@ -236,7 +270,8 @@ class HomeScreen extends HookConsumerWidget {
                                                   color: Colors.grey[100],
                                                 ),
                                                 child: Icon(
-                                                  Icons.image_not_supported_outlined,
+                                                  Icons
+                                                      .image_not_supported_outlined,
                                                   size: 32,
                                                   color: Colors.grey[400],
                                                 ),
@@ -244,27 +279,35 @@ class HomeScreen extends HookConsumerWidget {
                                   ),
                                   Expanded(
                                     child: Padding(
-                                      padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
+                                      padding: const EdgeInsets.fromLTRB(
+                                          0, 16, 0, 16),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
                                           Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Expanded(
                                                 child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      itemName.isEmpty ? '-' : itemName,
-                                                      style: GoogleFonts.notoSans(
+                                                      itemName.isEmpty
+                                                          ? '-'
+                                                          : itemName,
+                                                      style:
+                                                          GoogleFonts.notoSans(
                                                         fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
+                                                        fontWeight:
+                                                            FontWeight.bold,
                                                         color: Colors.grey[800],
                                                       ),
                                                       maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ],
                                                 ),
@@ -272,30 +315,37 @@ class HomeScreen extends HookConsumerWidget {
                                               if (item.imagePaths != null &&
                                                   item.imagePaths!.length > 1)
                                                 Container(
-                                                  margin: const EdgeInsets.only(left: 8),
-                                                  padding: const EdgeInsets.symmetric(
+                                                  margin: const EdgeInsets.only(
+                                                      left: 8),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
                                                     horizontal: 8,
                                                     vertical: 4,
                                                   ),
                                                   decoration: BoxDecoration(
                                                     color: Colors.grey[100],
                                                     borderRadius:
-                                                        BorderRadius.circular(8),
+                                                        BorderRadius.circular(
+                                                            8),
                                                   ),
                                                   child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
                                                       Icon(
-                                                        Icons.photo_library_outlined,
+                                                        Icons
+                                                            .photo_library_outlined,
                                                         size: 14,
                                                         color: Colors.grey[600],
                                                       ),
                                                       const SizedBox(width: 4),
                                                       Text(
                                                         '${item.imagePaths!.length}枚',
-                                                        style: GoogleFonts.notoSans(
+                                                        style: GoogleFonts
+                                                            .notoSans(
                                                           fontSize: 12,
-                                                          color: Colors.grey[600],
+                                                          color:
+                                                              Colors.grey[600],
                                                         ),
                                                       ),
                                                     ],
@@ -315,7 +365,9 @@ class HomeScreen extends HookConsumerWidget {
                                           _buildInfoRow(
                                             Icons.place_outlined,
                                             '拾得場所',
-                                            locationText.isEmpty ? '-' : locationText,
+                                            locationText.isEmpty
+                                                ? '-'
+                                                : locationText,
                                           ),
                                         ],
                                       ),
