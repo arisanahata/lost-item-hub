@@ -132,18 +132,29 @@ class LostItemFormScreen extends HookConsumerWidget {
       if (initialFormData != null) {
         // 画像の読み込み
         if (initialFormData!['images'] != null) {
-          final List<dynamic> paths =
+          final List<dynamic> imagePaths =
               initialFormData!['images']! as List<dynamic>;
-          final List<String> imagePaths = paths.map((e) => e.toString()).toList();
-          storedImages.value = imagePaths
-              .map((imagePath) => StoredImage(
-                    id: imagePath,
-                    fileName: imagePath,
-                    bytes: Uint8List(0),
-                    createdAt: DateTime.now(),
-                  ))
-              .toList();
-          print('  保存済みの画像を読み込み: ${storedImages.value.length}枚');
+
+          print('画像の読み込み:');
+          print('  画像パス: $imagePaths');
+
+          // 画像データを取得
+          Future.wait(
+            imagePaths.map((path) async {
+              final image = await ref
+                  .read(imageRepositoryProvider)
+                  .getImage(path.toString());
+              if (image != null) {
+                print('  画像を読み込み: ${image.id}');
+                return image;
+              }
+              return null;
+            }),
+          ).then((images) {
+            final validImages = images.whereType<StoredImage>().toList();
+            print('  読み込んだ画像: ${validImages.length}枚');
+            storedImages.value = validImages;
+          });
         }
 
         // フォームデータの読み込み

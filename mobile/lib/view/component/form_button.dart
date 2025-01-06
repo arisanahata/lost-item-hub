@@ -7,6 +7,7 @@ class FormButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isPrimary;
   final bool isLoading;
+  final IconData? leadingIcon;
 
   const FormButton({
     super.key,
@@ -14,48 +15,66 @@ class FormButton extends StatelessWidget {
     this.onPressed,
     this.isPrimary = true,
     this.isLoading = false,
+    this.leadingIcon,
   });
 
   @override
   Widget build(BuildContext context) {
     final buttonStyle = isPrimary
-        ? AppStyle.primaryButtonStyle
+        ? AppStyle.primaryButtonStyle.copyWith(
+            padding: MaterialStateProperty.all(
+              const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 16,
+              ),
+            ),
+            shape: MaterialStateProperty.all(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(32),
+              ),
+            ),
+          )
         : AppStyle.secondaryButtonStyle;
 
-    final textStyle = GoogleFonts.notoSans(
-      fontSize: 16,
-      fontWeight: FontWeight.bold,
-      color: isPrimary ? Colors.white : AppStyle.primaryColor,
-    );
+    final textStyle = isPrimary
+        ? AppStyle.buttonTextStyle
+        : AppStyle.secondaryButtonTextStyle;
+
+    Widget buttonChild = isLoading
+        ? const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (leadingIcon != null) ...[
+                Icon(
+                  leadingIcon,
+                  color: isPrimary ? Colors.white : AppStyle.primaryColor,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+              ],
+              Text(text, style: textStyle),
+            ],
+          );
 
     if (isPrimary) {
       return ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: buttonStyle,
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(text, style: textStyle),
+        child: buttonChild,
       );
     } else {
       return OutlinedButton(
         onPressed: isLoading ? null : onPressed,
         style: buttonStyle,
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                ),
-              )
-            : Text(text, style: textStyle),
+        child: buttonChild,
       );
     }
   }

@@ -7,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../model/repository/image_repository.dart';
 import '../../../model/stored_image.dart';
 import '../../../viewmodel/form_viewmodel.dart';
+import '../../component/form_button.dart';
+import '../../style.dart';
 import '../form/lost_item_form_screen.dart';
 import '../form/lost_item_edit_screen.dart';
 
@@ -405,18 +407,23 @@ class HomeScreen extends HookConsumerWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const LostItemFormScreen(
-                isEditing: false,
-              ),
+              builder: (context) => const LostItemFormScreen(),
             ),
           );
         },
-        icon: const Icon(Icons.add),
-        label: Text(
-          '新規登録',
-          style: GoogleFonts.notoSans(),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        icon: const Icon(
+          Icons.add,
+          size: 24,
+          color: Colors.white,
         ),
-        backgroundColor: Theme.of(context).primaryColor,
+        label: Text(
+          '新規作成',
+          style: AppStyle.buttonTextStyle,
+        ),
+        backgroundColor: AppStyle.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
     );
   }

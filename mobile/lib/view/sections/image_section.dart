@@ -24,7 +24,8 @@ class ImageSection extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedImages = useState<List<XFile>>([]); // 新しく選択された画像
-    final storedImages = useState<List<StoredImage>>(initialImages ?? []); // 保存済みの画像
+    final storedImages =
+        useState<List<StoredImage>>(initialImages ?? []); // 保存済みの画像
     final imageRepository = ref.watch(imageRepositoryProvider);
 
     // 初期画像が変更されたら更新
@@ -62,7 +63,9 @@ class ImageSection extends HookConsumerWidget {
             }
           }
 
-          final totalImages = selectedImages.value.length + storedImages.value.length + images.length;
+          final totalImages = selectedImages.value.length +
+              storedImages.value.length +
+              images.length;
           if (totalImages > 5) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -79,11 +82,11 @@ class ImageSection extends HookConsumerWidget {
           print('  保存済みの画像数: ${storedImages.value.length}枚');
           print('  選択済みの画像数: ${selectedImages.value.length}枚');
           print('  追加する画像数: ${images.length}枚');
-          
+
           final newImages = [...selectedImages.value, ...images];
           selectedImages.value = newImages;
           print('  更新後の画像数: ${newImages.length}枚');
-          
+
           onImagesChanged?.call(newImages);
 
           if (context.mounted) {
@@ -112,10 +115,10 @@ class ImageSection extends HookConsumerWidget {
       print('ImageSection - 保存済みの画像を削除:');
       print('  削除する画像のインデックス: $index');
       print('  現在の画像数: ${storedImages.value.length}枚');
-      
+
       final newImages = [...storedImages.value];
       newImages.removeAt(index);
-      
+
       print('  更新後の画像数: ${newImages.length}枚');
       storedImages.value = newImages;
       onStoredImagesChanged?.call(newImages);
@@ -125,10 +128,10 @@ class ImageSection extends HookConsumerWidget {
       print('ImageSection - 選択済みの画像を削除:');
       print('  削除する画像のインデックス: $index');
       print('  現在の画像数: ${selectedImages.value.length}枚');
-      
+
       final newImages = [...selectedImages.value];
       newImages.removeAt(index);
-      
+
       print('  更新後の画像数: ${newImages.length}枚');
       selectedImages.value = newImages;
       onImagesChanged?.call(newImages);
@@ -141,7 +144,8 @@ class ImageSection extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (storedImages.value.isNotEmpty || selectedImages.value.isNotEmpty) ...[
+          if (storedImages.value.isNotEmpty ||
+              selectedImages.value.isNotEmpty) ...[
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -163,7 +167,7 @@ class ImageSection extends HookConsumerWidget {
                           ),
                         );
                       }
-                      
+
                       if (snapshot.hasError || !snapshot.hasData) {
                         return Container(
                           width: 100,
@@ -193,7 +197,8 @@ class ImageSection extends HookConsumerWidget {
                                 ),
                               ],
                               image: DecorationImage(
-                                image: MemoryImage(Uint8List.fromList(snapshot.data!.bytes)),
+                                image: MemoryImage(
+                                    Uint8List.fromList(snapshot.data!.bytes)),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -243,7 +248,7 @@ class ImageSection extends HookConsumerWidget {
                           ),
                         );
                       }
-                      
+
                       if (snapshot.hasError) {
                         return Container(
                           width: 100,
