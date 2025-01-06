@@ -302,12 +302,28 @@ class LostItemFormScreen extends HookConsumerWidget {
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
         isSubmitting.value = true;
         try {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => LostItemConfirmScreen(
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  LostItemConfirmScreen(
                 formData: formKey.value.currentState!.value,
                 draftId: draftId,
               ),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                const begin = Offset(1.0, 0.0);
+                const end = Offset.zero;
+                const curve = Curves.easeInOut;
+                var tween = Tween(begin: begin, end: end)
+                    .chain(CurveTween(curve: curve));
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
+              },
+              transitionDuration: const Duration(milliseconds: 300),
+              reverseTransitionDuration: const Duration(milliseconds: 300),
             ),
           );
         } finally {
