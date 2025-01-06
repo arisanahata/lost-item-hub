@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../../viewmodel/form_viewmodel.dart';
+import 'package:intl/intl.dart';
+import '../../../model/form_data.dart';
 import '../../style.dart';
 import '../../component/section_card.dart';
 
@@ -16,20 +17,78 @@ class LostItemConfirmScreen extends HookConsumerWidget {
     this.draftId,
   }) : super(key: key);
 
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: AppStyle.iconColor,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.notoSans(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    height: 1.4,
+                  ),
+                ),
+                Text(
+                  value.isEmpty ? '-' : value,
+                  style: GoogleFonts.notoSans(
+                    fontSize: 15,
+                    color: Colors.grey[800],
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatRightsOptions(List<dynamic> options) {
+    final Map<String, String> optionLabels = {
+      'expense': '費用請求権',
+      'reward': '報労金請求権',
+      'ownership': '所有権',
+    };
+    return options
+        .map((option) => optionLabels[option] ?? option.toString())
+        .join('、');
+  }
+
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return '';
+    return DateFormat('yyyy/MM/dd').format(dateTime);
+  }
+
+  String _formatTime(DateTime? dateTime) {
+    if (dateTime == null) return '';
+    return DateFormat('HH:mm').format(dateTime);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewModel = ref.watch(formViewModelProvider);
     final isSubmitting = useState(false);
 
     Future<void> onSubmit() async {
       try {
         isSubmitting.value = true;
-        await ref
-            .read(formViewModelProvider.notifier)
-            .submitForm(formData, draftId);
+        // TODO: フォームの送信処理
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('拾得物の届出が完了しました')),
+            const SnackBar(content: Text('拾得物の登録が完了しました')),
           );
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
@@ -44,121 +103,220 @@ class LostItemConfirmScreen extends HookConsumerWidget {
       }
     }
 
-    Widget _buildConfirmSection(String title, Map<String, dynamic> data) {
-      return SectionCard(
-        title: title,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: data.entries.map((entry) {
-            if (entry.value == null) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.key,
-                    style: GoogleFonts.notoSans(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    entry.value.toString(),
-                    style: GoogleFonts.notoSans(
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-      );
-    }
-
     return Scaffold(
+      backgroundColor: AppStyle.backgroundColor,
       appBar: AppBar(
         title: Text(
           '内容確認',
-          style: GoogleFonts.notoSans(
-            fontWeight: FontWeight.bold,
-          ),
+          style: GoogleFonts.notoSans(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: Stack(
+      body: Column(
         children: [
-          ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildConfirmSection('基本情報', {
-                '遺失物の名称': formData['itemName'],
-                '特徴': formData['itemDescription'],
-                '現金': formData['cash'] != null ? '¥${formData['cash']}' : null,
-              }),
-              const SizedBox(height: 16),
-              _buildConfirmSection('拾得日時', {
-                '拾得日': formData['foundDate']?.toString().split(' ')[0],
-                '拾得時刻': formData['foundTime']?.toString().split(' ')[1],
-              }),
-              const SizedBox(height: 16),
-              _buildConfirmSection('拾得場所', {
-                '郵便番号': formData['locationPostalCode'],
-                '住所': formData['locationAddress'],
-                '路線': formData['routeName'],
-                '車両': formData['vehicleNumber'],
-              }),
-              const SizedBox(height: 16),
-              _buildConfirmSection('拾得者情報', {
-                '氏名': formData['finderName'],
-                '連絡先': formData['finderContact'],
-                '郵便番号': formData['finderPostalCode'],
-                '住所': formData['finderAddress'],
-              }),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: isSubmitting.value
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      style: AppStyle.secondaryButtonStyle,
-                      child: Text(
-                        '戻る',
-                        style: GoogleFonts.notoSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    SectionCard(
+                      title: '基本情報',
+                      icon: Icons.info_outline,
+                      child: Column(
+                        children: [
+                          _buildInfoRow(
+                            Icons.inventory_2,
+                            '遺失物の名称',
+                            formData['itemName'] ?? '',
+                          ),
+                          _buildInfoRow(
+                            Icons.attach_money,
+                            '現金',
+                            formData['cash'] != null && formData['cash'] > 0
+                                ? '${formData['cash']}円'
+                                : '-',
+                          ),
+                          _buildInfoRow(
+                            Icons.color_lens,
+                            '色',
+                            formData['itemColor'] ?? '',
+                          ),
+                          _buildInfoRow(
+                            Icons.description,
+                            '特徴など',
+                            formData['itemDescription'] ?? '',
+                          ),
+                          _buildInfoRow(
+                            Icons.receipt_long,
+                            '預り証発行',
+                            formData['needsReceipt'] == true ? '有' : '無',
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: isSubmitting.value ? null : onSubmit,
-                      style: AppStyle.primaryButtonStyle,
-                      child: Text(
-                        '提出',
-                        style: GoogleFonts.notoSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    SectionCard(
+                      title: '拾得場所',
+                      icon: Icons.place_outlined,
+                      child: Column(
+                        children: [
+                          _buildInfoRow(
+                            Icons.train,
+                            '路線',
+                            formData['routeName'] ?? '',
+                          ),
+                          _buildInfoRow(
+                            Icons.numbers,
+                            '車番',
+                            formData['vehicleNumber'] ?? '',
+                          ),
+                          _buildInfoRow(
+                            Icons.place,
+                            'その他の場所',
+                            formData['otherLocation'] ?? '',
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          if (isSubmitting.value)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
+                    SectionCard(
+                      title: '権利確認',
+                      icon: Icons.gavel,
+                      child: Column(
+                        children: [
+                          _buildInfoRow(
+                            Icons.gavel,
+                            '権利放棄',
+                            formData['hasRightsWaiver'] == true
+                                ? '一切の権利を放棄'
+                                : '権利を保持する',
+                          ),
+                          if (formData['hasRightsWaiver'] == false) ...[
+                            _buildInfoRow(
+                              Icons.check_circle_outline,
+                              '保持する権利',
+                              _formatRightsOptions(
+                                  formData['rightsOptions'] as List<dynamic>? ??
+                                      []),
+                            ),
+                            _buildInfoRow(
+                              Icons.person_outline,
+                              '氏名等告知の同意',
+                              formData['hasConsentToDisclose'] == true
+                                  ? '同意する'
+                                  : '同意しない',
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    SectionCard(
+                      title: '拾得日時',
+                      icon: Icons.calendar_today,
+                      child: Column(
+                        children: [
+                          _buildInfoRow(
+                            Icons.calendar_today,
+                            '拾得日',
+                            _formatDateTime(formData['foundDate']),
+                          ),
+                          _buildInfoRow(
+                            Icons.access_time,
+                            '拾得時刻',
+                            _formatTime(formData['foundTime']),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SectionCard(
+                      title: '拾得者情報',
+                      icon: Icons.person,
+                      child: Column(
+                        children: [
+                          _buildInfoRow(
+                            Icons.person,
+                            '氏名',
+                            formData['finderName'] ?? '',
+                          ),
+                          _buildInfoRow(
+                            Icons.phone,
+                            '連絡先',
+                            formData['finderContact'] ?? '',
+                          ),
+                          _buildInfoRow(
+                            Icons.location_on,
+                            '郵便番号',
+                            formData['finderPostalCode'] ?? '',
+                          ),
+                          _buildInfoRow(
+                            Icons.home,
+                            '住所',
+                            formData['finderAddress'] ?? '',
+                          ),
+                        ],
+                      ),
+                    ),
+                    SectionCard(
+                      title: '画像',
+                      icon: Icons.photo_outlined,
+                      child: _buildInfoRow(
+                        Icons.photo_library_outlined,
+                        '添付画像',
+                        '${(formData['images'] as List<dynamic>?)?.length ?? 0}枚',
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                top: BorderSide(
+                  color: Colors.grey[200]!,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: AppStyle.secondaryButtonStyle,
+                    child: Text(
+                      '修正する',
+                      style: AppStyle.secondaryButtonTextStyle,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: isSubmitting.value ? null : onSubmit,
+                    style: AppStyle.primaryButtonStyle,
+                    child: isSubmitting.value
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(
+                            '登録する',
+                            style: AppStyle.buttonTextStyle,
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
