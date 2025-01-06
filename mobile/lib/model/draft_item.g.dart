@@ -21,13 +21,14 @@ class DraftItemAdapter extends TypeAdapter<DraftItem> {
       formData: (fields[1] as Map).cast<String, dynamic>(),
       createdAt: fields[2] as DateTime,
       updatedAt: fields[3] as DateTime,
+      imagePaths: (fields[4] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, DraftItem obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class DraftItemAdapter extends TypeAdapter<DraftItem> {
       ..writeByte(2)
       ..write(obj.createdAt)
       ..writeByte(3)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(4)
+      ..write(obj.imagePaths);
   }
 
   @override
@@ -58,6 +61,9 @@ DraftItem _$DraftItemFromJson(Map<String, dynamic> json) => DraftItem(
       formData: json['formData'] as Map<String, dynamic>,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      imagePaths: (json['imagePaths'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
     );
 
 Map<String, dynamic> _$DraftItemToJson(DraftItem instance) => <String, dynamic>{
@@ -65,4 +71,5 @@ Map<String, dynamic> _$DraftItemToJson(DraftItem instance) => <String, dynamic>{
       'formData': instance.formData,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
+      'imagePaths': instance.imagePaths,
     };

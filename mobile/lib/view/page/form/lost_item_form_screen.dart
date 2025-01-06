@@ -4,9 +4,11 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../util/image_storage.dart';
+import 'dart:typed_data'; // import追加
+import '../../../model/draft_item.dart';
+import '../../../model/repository/image_repository.dart';
+import '../../../model/stored_image.dart';
 import '../../../viewmodel/form_viewmodel.dart';
-import '../../component/money_input.dart';
 import '../../sections/basic_section.dart';
 import '../../sections/date_section.dart';
 import '../../sections/finder_section.dart';
@@ -34,20 +36,12 @@ class LostItemFormScreen extends HookConsumerWidget {
     final isSaving = useState(false);
     final totalAmount = useState(0);
     final selectedImages = useState<List<XFile>>([]);
+    final storedImages = useState<List<StoredImage>>([]);
     final showRightsOptions = useState(false);
     final showButtons = useState(true);
-
-    // 初期画像の読み込み
-    useEffect(() {
-      if (initialFormData != null && initialFormData!['imagePaths'] != null) {
-        Future.microtask(() async {
-          final imagePaths = List<String>.from(initialFormData!['imagePaths']);
-          final images = await ImageStorage.pathsToXFiles(imagePaths);
-          selectedImages.value = images;
-        });
-      }
-      return null;
-    }, []);
+    final isInteracting = useState(false);
+    final filledFields = useState<Set<String>>({});
+    final isSubmitting = useState(false);
 
     // ScrollControllerの初期化と破棄を適切に管理
     final scrollController = useMemoized(() => ScrollController(), []);
@@ -56,9 +50,6 @@ class LostItemFormScreen extends HookConsumerWidget {
         scrollController.dispose();
       };
     }, [scrollController]);
-
-    final isInteracting = useState(false);
-    final filledFields = useState<Set<String>>({});
 
     // AnimationControllerの初期化
     final vsync = useSingleTickerProvider();
@@ -136,22 +127,46 @@ class LostItemFormScreen extends HookConsumerWidget {
       };
     }, [nodes]);
 
-    // フォームの値が変更されたときの処理
+    // 保存済みの画像を読み込む
+    useEffect(() {
+      if (initialFormData != null && initialFormData!['images'] != null) {
+        final List<dynamic> paths =
+            initialFormData!['images']! as List<dynamic>;
+        final List<String> imagePaths = paths.map((e) => e.toString()).toList();
+        storedImages.value = imagePaths
+            .map((imagePath) => StoredImage(
+                  id: imagePath,
+                  fileName: imagePath,
+                  bytes: Uint8List(0),
+                  createdAt: DateTime.now(),
+                ))
+            .toList();
+        print('  保存済みの画像を読み込み: ${storedImages.value.length}枚');
+      }
+      return null;
+    }, []);
+
     void onFieldChanged(String fieldName, dynamic value) {
       print('LostItemFormScreen - フィールドが変更されました:');
       print('  フィールド名: $fieldName');
       print('  値: $value');
-      
+
       if (value != null) {
         // build中のsetStateを避けるために遅延実行
         Future.microtask(() {
-          filledFields.value = {...filledFields.value, fieldName};
-          // フォームの状態を更新
-          if (formKey.value.currentState?.fields[fieldName] != null) {
-            print('  フォームの値を更新: $value');
-            formKey.value.currentState?.fields[fieldName]?.didChange(value);
+          if (fieldName == 'images') {
+            print('  画像データを更新: ${(value as List<XFile>).length}枚');
+            selectedImages.value = List<XFile>.from(value);
           } else {
-            print('  フィールドが見つかりません: $fieldName');
+            filledFields.value = {...filledFields.value, fieldName};
+            final currentValue =
+                formKey.value.currentState?.fields[fieldName]?.value;
+            if (currentValue != value) {
+              print('  フォームの値を更新: $value (現在の値: $currentValue)');
+              formKey.value.currentState?.fields[fieldName]?.didChange(value);
+            } else {
+              print('  フォームの値は既に最新: $value');
+            }
           }
         });
       } else {
@@ -162,40 +177,35 @@ class LostItemFormScreen extends HookConsumerWidget {
       }
     }
 
+    void onStoredImagesChanged(List<StoredImage> images) {
+      print('LostItemFormScreen - 保存済みの画像が変更されました:');
+      print('  画像数: ${images.length}枚');
+      storedImages.value = images;
+    }
+
     // 保存処理
     Future<void> saveDraft() async {
-      print('\nLostItemFormScreen - 保存処理を開始');
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
-        print('  フォームのバリデーションが成功');
         final formData =
             Map<String, dynamic>.from(formKey.value.currentState!.value);
-        
-        print('  フォームの全データ:');
-        formData.forEach((key, value) {
-          print('    $key: $value');
-        });
 
-        // 現金データを追加（フォームから取得）
+        // 現金データの処理
         final cashValue = formData['cash'] as int?;
         print('\n  現金データの処理:');
         print('    取得した値: $cashValue');
-        
+
         if (cashValue != null && cashValue > 0) {
           formData['cash'] = cashValue;
-          print('    保存する金額: $cashValue');
+          print('    保存する値: ${formData['cash']}');
         } else {
-          print('    現金データは保存しません');
+          formData.remove('cash');
+          print('    現金データを削除');
         }
 
-        // 画像データを追加
-        formData['images'] = selectedImages.value;
-
-        print('\n=== 保存するフォームデータ ===');
+        print('=== 保存するフォームデータ ===');
         print('編集モード: $isEditing');
         print('Draft ID: $draftId');
-        print('現金: ${formData['cash'] ?? 0}円');
         print('フォームデータ: $formData');
-        print('画像枚数: ${selectedImages.value.length}');
         print('========================');
 
         try {
@@ -249,6 +259,7 @@ class LostItemFormScreen extends HookConsumerWidget {
 
     Future<void> onSubmit() async {
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
+        isSubmitting.value = true;
         try {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -258,16 +269,15 @@ class LostItemFormScreen extends HookConsumerWidget {
               ),
             ),
           );
-        } finally {}
+        } finally {
+          isSubmitting.value = false;
+        }
       }
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          isEditing ? '忘れ物情報編集' : '忘れ物情報登録',
-          style: AppStyle.titleStyle,
-        ),
+        title: Text(isEditing ? '下書きを編集' : '新規登録'),
       ),
       body: FormBuilder(
         key: formKey.value,
@@ -310,11 +320,11 @@ class LostItemFormScreen extends HookConsumerWidget {
                   totalAmount: totalAmount,
                 ),
                 ImageSection(
-                  initialImages: selectedImages.value,
+                  initialImages: storedImages.value,
                   onImagesChanged: (images) {
-                    selectedImages.value = images;
                     onFieldChanged('images', images);
                   },
+                  onStoredImagesChanged: onStoredImagesChanged,
                 ),
                 const SizedBox(height: 32),
               ],

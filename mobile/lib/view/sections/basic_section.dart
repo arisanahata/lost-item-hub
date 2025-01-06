@@ -34,6 +34,7 @@ class BasicSection extends StatelessWidget {
           FormBuilderTextField(
             name: 'itemName',
             focusNode: nodes['itemName'],
+            initialValue: initialData?['itemName'],
             decoration: InputDecoration(
               labelText: '遺失物の名称 *',
               labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -51,7 +52,13 @@ class BasicSection extends StatelessWidget {
             ),
             validator:
                 FormBuilderValidators.required(errorText: '遺失物の名称を入力してください'),
-            onChanged: (value) => onFieldChanged?.call('itemName', value),
+            onChanged: (value) {
+              // 値が変更されたときだけ通知
+              if (value != formKey.currentState?.fields['itemName']?.value) {
+                print('BasicSection - 名称が変更されました: $value');
+                onFieldChanged?.call('itemName', value);
+              }
+            },
           ),
           const SizedBox(height: 16),
           // 現金データ用の非表示フィールド
@@ -88,6 +95,7 @@ class BasicSection extends StatelessWidget {
           const SizedBox(height: 16),
           FormBuilderTextField(
             name: 'itemColor',
+            initialValue: initialData?['itemColor'],
             decoration: InputDecoration(
               labelText: '色',
               labelStyle: GoogleFonts.notoSans(fontSize: 16),
@@ -103,11 +111,18 @@ class BasicSection extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
-            onChanged: (value) => onFieldChanged?.call('itemColor', value),
+            onChanged: (value) {
+              // 値が変更されたときだけ通知
+              if (value != formKey.currentState?.fields['itemColor']?.value) {
+                print('BasicSection - 色が変更されました: $value');
+                onFieldChanged?.call('itemColor', value);
+              }
+            },
           ),
           const SizedBox(height: 16),
           FormBuilderTextField(
             name: 'itemDescription',
+            initialValue: initialData?['itemDescription'],
             minLines: 3,
             maxLines: null,
             decoration: InputDecoration(
@@ -125,8 +140,13 @@ class BasicSection extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
-            onChanged: (value) =>
-                onFieldChanged?.call('itemDescription', value),
+            onChanged: (value) {
+              // 値が変更されたときだけ通知
+              if (value != formKey.currentState?.fields['itemDescription']?.value) {
+                print('BasicSection - 特徴などが変更されました: $value');
+                onFieldChanged?.call('itemDescription', value);
+              }
+            },
           ),
           const SizedBox(height: 16),
           FormBuilderRadioGroup(

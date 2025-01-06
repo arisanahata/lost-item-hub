@@ -1,65 +1,90 @@
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
-import 'package:uuid/uuid.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import '../model/repository/image_repository.dart';
+import '../model/stored_image.dart';
 
 class ImageStorage {
-  static String? _basePath;
-  static const String _imageDir = 'images';
-
   static Future<String> get basePath async {
-    if (_basePath == null) {
-      final directory = await getApplicationDocumentsDirectory();
-      _basePath = directory.path;
-      
-      // 画像保存用ディレクトリがない場合は作成
-      final imageDir = Directory('$_basePath/$_imageDir');
-      if (!await imageDir.exists()) {
-        await imageDir.create(recursive: true);
+    final directory = await getApplicationDocumentsDirectory();
+    final path = '${directory.path}/images';
+    await Directory(path).create(recursive: true);
+    return path;
+  }
+
+  /// 画像パスから画像を保存
+  static Future<List<String>> saveImagePaths(List<String> imagePaths, ImageRepository repository) async {
+    print('ImageStorage - 画像パスから保存を開始: ${imagePaths.length}枚');
+    final savedIds = <String>[];
+
+    for (var path in imagePaths) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          final bytes = await file.readAsBytes();
+          final fileName = path.split('/').last;
+          final savedImage = await repository.saveImage(bytes, fileName);
+          savedIds.add(savedImage.id);
+          print('  画像を保存: ${savedImage.id}');
+        } else {
+          print('  画像ファイルが存在しません: $path');
+        }
+      } catch (e) {
+        print('  画像の保存に失敗: $e');
       }
     }
-    return _basePath!;
+
+    print('ImageStorage - 保存完了: ${savedIds.length}枚');
+    return savedIds;
   }
 
-  static Future<String> saveImage(XFile image) async {
-    final basePath = await ImageStorage.basePath;
+  /// 画像を保存
+  static Future<List<String>> saveImages(List<XFile> images, ImageRepository repository) async {
+    print('ImageStorage - 画像の保存を開始: ${images.length}枚');
+    final savedIds = <String>[];
+
+    for (var image in images) {
+      try {
+        final bytes = await image.readAsBytes();
+        final fileName = image.name;
+        final savedImage = await repository.saveImage(bytes, fileName);
+        savedIds.add(savedImage.id);
+        print('  画像を保存: ${savedImage.id}');
+      } catch (e) {
+        print('  画像の保存に失敗: $e');
+      }
+    }
+
+    print('ImageStorage - 保存完了: ${savedIds.length}枚');
+    return savedIds;
+  }
+
+  /// 画像を削除
+  static Future<void> deleteImages(List<String> ids, ImageRepository repository) async {
+    print('ImageStorage - 画像の削除を開始: ${ids.length}枚');
     
-    // ユニークなファイル名を生成
-    final extension = path.extension(image.path);
-    final fileName = '${const Uuid().v4()}$extension';
-    final relativePath = '$_imageDir/$fileName';
-    final absolutePath = '$basePath/$relativePath';
-
-    // 画像をコピー
-    final File newImage = File(absolutePath);
-    await newImage.writeAsBytes(await image.readAsBytes());
-
-    // 相対パスを返す
-    return relativePath;
-  }
-
-  static Future<List<String>> saveImages(List<XFile> images) async {
-    final savedPaths = <String>[];
-    for (final image in images) {
-      final savedPath = await saveImage(image);
-      savedPaths.add(savedPath);
+    try {
+      await repository.deleteImages(ids);
+      print('  画像を削除: ${ids.length}枚');
+    } catch (e) {
+      print('  画像の削除に失敗: $e');
     }
-    return savedPaths;
+    
+    print('ImageStorage - 削除完了');
   }
 
-  static Future<void> deleteImage(String imagePath) async {
-    final basePath = await ImageStorage.basePath;
-    final absolutePath = '$basePath/$imagePath';
-    final file = File(absolutePath);
-    if (await file.exists()) {
-      await file.delete();
-    }
-  }
-
-  static Future<void> deleteImages(List<String> imagePaths) async {
-    for (final path in imagePaths) {
-      await deleteImage(path);
+  /// 画像を取得
+  static Future<List<StoredImage>> getImages(List<String> ids, ImageRepository repository) async {
+    print('ImageStorage - 画像の取得を開始: ${ids.length}枚');
+    
+    try {
+      final images = await repository.getImages(ids);
+      print('  画像を取得: ${images.length}枚');
+      return images;
+    } catch (e) {
+      print('  画像の取得に失敗: $e');
+      return [];
     }
   }
 
