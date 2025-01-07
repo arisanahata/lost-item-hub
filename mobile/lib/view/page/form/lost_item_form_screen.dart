@@ -130,35 +130,29 @@ class LostItemFormScreen extends HookConsumerWidget {
     // 初期データの読み込み
     useEffect(() {
       if (initialFormData != null) {
+        print('LostItemFormScreen - 初期データを読み込み:');
+
+        // フォームデータの設定
+        formKey.value.currentState?.patchValue({
+          ...initialFormData!,
+        });
+
         // 画像の読み込み
-        if (initialFormData!['images'] != null) {
-          final List<dynamic> imagePaths =
-              initialFormData!['images']! as List<dynamic>;
-
-          print('画像の読み込み:');
-          print('  画像パス: $imagePaths');
-
-          // 画像データを取得
-          Future.wait(
-            imagePaths.map((path) async {
-              final image = await ref
-                  .read(imageRepositoryProvider)
-                  .getImage(path.toString());
-              if (image != null) {
-                print('  画像を読み込み: ${image.id}');
-                return image;
+        if (isEditing && initialFormData!['draft'] != null) {
+          final draft = initialFormData!['draft'] as DraftItem;
+          if (draft.imagePaths != null && draft.imagePaths!.isNotEmpty) {
+            print('  画像の読み込みを開始: ${draft.imagePaths!.length}枚');
+            ref
+                .read(formViewModelProvider.notifier)
+                .loadImages(draft.imagePaths!)
+                .then((loadedImages) {
+              if (loadedImages.isNotEmpty) {
+                storedImages.value = loadedImages;
+                print('  画像の読み込み完了: ${loadedImages.length}枚');
               }
-              return null;
-            }),
-          ).then((images) {
-            final validImages = images.whereType<StoredImage>().toList();
-            print('  読み込んだ画像: ${validImages.length}枚');
-            storedImages.value = validImages;
-          });
+            });
+          }
         }
-
-        // フォームデータの読み込み
-        formKey.value.currentState?.patchValue(initialFormData!);
       }
       return null;
     }, [initialFormData]);
@@ -203,66 +197,44 @@ class LostItemFormScreen extends HookConsumerWidget {
     // 保存処理
     Future<void> saveDraft() async {
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
-        final formData =
-            Map<String, dynamic>.from(formKey.value.currentState!.value);
-
-        // 現金データの処理
-        final cashValue = formData['cash'] as int?;
-        print('\n  現金データの処理:');
-        print('    取得した値: $cashValue');
-
-        if (cashValue != null && cashValue > 0) {
-          formData['cash'] = cashValue;
-          print('    保存する値: ${formData['cash']}');
-        } else {
-          formData.remove('cash');
-          print('    現金データを削除');
-        }
-
-        // 画像データの処理
-        print('\n  画像データの処理:');
-        print('    選択された画像: ${selectedImages.value.length}枚');
-        print('    保存済みの画像: ${storedImages.value.length}枚');
-
-        // 画像データの配列を作成
-        final List<String> imagePaths = [];
-
-        // 保存済みの画像のパスを保存
-        for (var image in storedImages.value) {
-          imagePaths.add(image.fileName);
-        }
-
-        // 選択された画像のパスを保存
-        for (var image in selectedImages.value) {
-          imagePaths.add(image.path);
-        }
-
-        if (imagePaths.isNotEmpty) {
-          formData['images'] = imagePaths;
-          print('    保存する画像: ${imagePaths.length}枚');
-          print('    画像パス: $imagePaths');
-        }
-
-        print('=== 保存するフォームデータ ===');
-        print('編集モード: $isEditing');
-        print('Draft ID: $draftId');
-        print('フォームデータ: $formData');
-        print('========================');
-
         try {
           isSaving.value = true;
+          final formData =
+              Map<String, dynamic>.from(formKey.value.currentState!.value);
+
+          print('\n  現金データの処理:');
+          final cash = formData['cash'];
+          print('    取得した値: $cash');
+          if (cash == 0) {
+            formData.remove('cash');
+            print('    現金データを削除');
+          }
+
+          print('\n  画像データの処理:');
+          final selectedImagePaths =
+              selectedImages.value.map((file) => file.path).toList();
+          final storedImagePaths =
+              storedImages.value.map((image) => image.id).toList();
+          final allImagePaths = [...storedImagePaths, ...selectedImagePaths];
+
+          print('    選択された画像: ${selectedImagePaths.length}枚');
+          print('    保存済みの画像: ${storedImagePaths.length}枚');
+          print('    保存する画像: ${allImagePaths.length}枚');
+          print('    画像パス: $allImagePaths');
 
           if (isEditing && draftId != null) {
             // 上書き保存
             print('上書き保存を実行');
             await ref
                 .read(formViewModelProvider.notifier)
-                .updateDraft(draftId!, formData);
+                .saveDraft(formData, allImagePaths, draftId: draftId);
             print('上書き保存完了');
           } else {
             // 新規の下書き保存
             print('新規保存を実行');
-            await ref.read(formViewModelProvider.notifier).saveDraft(formData);
+            await ref
+                .read(formViewModelProvider.notifier)
+                .saveDraft(formData, allImagePaths);
             print('新規保存完了');
           }
 
@@ -379,9 +351,11 @@ class LostItemFormScreen extends HookConsumerWidget {
                 ImageSection(
                   initialImages: storedImages.value,
                   onImagesChanged: (images) {
-                    onFieldChanged('images', images);
+                    selectedImages.value = images;
                   },
-                  onStoredImagesChanged: onStoredImagesChanged,
+                  onStoredImagesChanged: (images) {
+                    storedImages.value = images;
+                  },
                 ),
                 const SizedBox(height: 32),
               ],

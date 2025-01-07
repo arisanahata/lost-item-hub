@@ -146,9 +146,13 @@ class ImageSection extends HookConsumerWidget {
         children: [
           if (storedImages.value.isNotEmpty ||
               selectedImages.value.isNotEmpty) ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1,
               children: [
                 ...storedImages.value.map((image) {
                   return FutureBuilder<StoredImage?>(
@@ -156,8 +160,8 @@ class ImageSection extends HookConsumerWidget {
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Container(
-                          width: 100,
-                          height: 100,
+                          width: 80,
+                          height: 80,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: Colors.grey[200],
@@ -170,8 +174,8 @@ class ImageSection extends HookConsumerWidget {
 
                       if (snapshot.hasError || !snapshot.hasData) {
                         return Container(
-                          width: 100,
-                          height: 100,
+                          width: 80,
+                          height: 80,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: Colors.grey[200],
@@ -185,17 +189,10 @@ class ImageSection extends HookConsumerWidget {
                       return Stack(
                         children: [
                           Container(
-                            width: 100,
-                            height: 100,
+                            width: 80,
+                            height: 80,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                               image: DecorationImage(
                                 image: MemoryImage(
                                     Uint8List.fromList(snapshot.data!.bytes)),
@@ -207,22 +204,25 @@ class ImageSection extends HookConsumerWidget {
                             top: 4,
                             right: 4,
                             child: Container(
+                              width: 24,
+                              height: 24,
                               decoration: BoxDecoration(
                                 color: Colors.black.withOpacity(0.5),
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.close),
-                                color: Colors.white,
-                                iconSize: 20,
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
                                 padding: EdgeInsets.zero,
-                                onPressed: () => removeStoredImage(
-                                  storedImages.value.indexOf(image),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 16,
                                 ),
+                                onPressed: () {
+                                  final newImages = [...storedImages.value];
+                                  newImages.remove(image);
+                                  storedImages.value = newImages;
+                                  onStoredImagesChanged?.call(newImages);
+                                },
                               ),
                             ),
                           ),
@@ -237,8 +237,8 @@ class ImageSection extends HookConsumerWidget {
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Container(
-                          width: 100,
-                          height: 100,
+                          width: 80,
+                          height: 80,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: Colors.grey[200],
@@ -251,8 +251,8 @@ class ImageSection extends HookConsumerWidget {
 
                       if (snapshot.hasError) {
                         return Container(
-                          width: 100,
-                          height: 100,
+                          width: 80,
+                          height: 80,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: Colors.grey[200],
@@ -266,17 +266,10 @@ class ImageSection extends HookConsumerWidget {
                       return Stack(
                         children: [
                           Container(
-                            width: 100,
-                            height: 100,
+                            width: 80,
+                            height: 80,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                               image: DecorationImage(
                                 image: MemoryImage(snapshot.data!),
                                 fit: BoxFit.cover,
@@ -287,22 +280,25 @@ class ImageSection extends HookConsumerWidget {
                             top: 4,
                             right: 4,
                             child: Container(
+                              width: 24,
+                              height: 24,
                               decoration: BoxDecoration(
                                 color: Colors.black.withOpacity(0.5),
                                 shape: BoxShape.circle,
                               ),
                               child: IconButton(
-                                icon: const Icon(Icons.close),
-                                color: Colors.white,
-                                iconSize: 20,
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
                                 padding: EdgeInsets.zero,
-                                onPressed: () => removeSelectedImage(
-                                  selectedImages.value.indexOf(image),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 16,
                                 ),
+                                onPressed: () {
+                                  final newImages = [...selectedImages.value];
+                                  newImages.remove(image);
+                                  selectedImages.value = newImages;
+                                  onImagesChanged?.call(newImages);
+                                },
                               ),
                             ),
                           ),

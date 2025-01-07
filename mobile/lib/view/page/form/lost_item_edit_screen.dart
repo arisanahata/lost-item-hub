@@ -32,7 +32,10 @@ class LostItemEditScreen extends ConsumerWidget {
         return LostItemFormScreen(
           isEditing: true,
           draftId: draftId,
-          initialFormData: draft.formData,
+          initialFormData: {
+            ...draft.formData,
+            'draft': draft,  // draftオブジェクト全体を渡す
+          },
         );
       },
       error: (error, stack) => Scaffold(

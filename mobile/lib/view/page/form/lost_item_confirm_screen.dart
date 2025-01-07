@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../model/form_data.dart';
+import '../../../model/stored_image.dart';
+import '../../../model/repository/image_repository.dart';
 import '../../style.dart';
 import '../../component/section_card.dart';
 
@@ -78,9 +80,68 @@ class LostItemConfirmScreen extends HookConsumerWidget {
     return DateFormat('HH:mm').format(dateTime);
   }
 
+  Widget _buildImageSection(List<String> imageIds, ImageRepository imageRepository) {
+    return SectionCard(
+      title: '画像',
+      icon: Icons.image,
+      iconColor: Colors.grey[600],
+      child: imageIds.isEmpty
+          ? const Text('画像なし')
+          : GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1,
+              children: imageIds.map((id) {
+                return FutureBuilder<StoredImage?>(
+                  future: imageRepository.getImage(id),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey[200],
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError || !snapshot.hasData) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey[200],
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.error, color: Colors.red),
+                        ),
+                      );
+                    }
+
+                    return Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        image: DecorationImage(
+                          image: MemoryImage(snapshot.data!.bytes),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }).toList(),
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isSubmitting = useState(false);
+    final imageRepository = ref.watch(imageRepositoryProvider);
 
     Future<void> onSubmit() async {
       try {
@@ -123,7 +184,8 @@ class LostItemConfirmScreen extends HookConsumerWidget {
                   children: [
                     SectionCard(
                       title: '基本情報',
-                      icon: Icons.info_outline,
+                      icon: Icons.info,
+                      iconColor: Colors.grey[600],
                       child: Column(
                         children: [
                           _buildInfoRow(
@@ -256,15 +318,12 @@ class LostItemConfirmScreen extends HookConsumerWidget {
                         ],
                       ),
                     ),
-                    SectionCard(
-                      title: '画像',
-                      icon: Icons.photo_outlined,
-                      child: _buildInfoRow(
-                        Icons.photo_library_outlined,
-                        '添付画像',
-                        '${(formData['images'] as List<dynamic>?)?.length ?? 0}枚',
+                    if (formData['draft'] != null &&
+                        formData['draft'].imagePaths != null)
+                      _buildImageSection(
+                        List<String>.from(formData['draft'].imagePaths!),
+                        imageRepository,
                       ),
-                    ),
                   ],
                 ),
               ),
