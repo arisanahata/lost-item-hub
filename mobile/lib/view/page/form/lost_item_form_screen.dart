@@ -274,12 +274,22 @@ class LostItemFormScreen extends HookConsumerWidget {
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
         isSubmitting.value = true;
         try {
+          final formData = Map<String, dynamic>.from(formKey.value.currentState!.value);
+          
+          // 画像データを追加
+          final storedImageIds = storedImages.value.map((image) => image.id).toList();
+          formData['images'] = storedImageIds;
+          
+          print('確認画面に遷移:');
+          print('  フォームデータ: $formData');
+          print('  画像データ: $storedImageIds');
+
           Navigator.push(
             context,
             PageRouteBuilder(
               pageBuilder: (context, animation, secondaryAnimation) =>
                   LostItemConfirmScreen(
-                formData: formKey.value.currentState!.value,
+                formData: formData,
                 draftId: draftId,
               ),
               transitionsBuilder:
