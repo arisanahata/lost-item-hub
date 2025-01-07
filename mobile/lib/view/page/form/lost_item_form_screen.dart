@@ -274,15 +274,37 @@ class LostItemFormScreen extends HookConsumerWidget {
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
         isSubmitting.value = true;
         try {
-          final formData = Map<String, dynamic>.from(formKey.value.currentState!.value);
-          
-          // 画像データを追加
-          final storedImageIds = storedImages.value.map((image) => image.id).toList();
-          formData['images'] = storedImageIds;
-          
+          final formData =
+              Map<String, dynamic>.from(formKey.value.currentState!.value);
+
           print('確認画面に遷移:');
           print('  フォームデータ: $formData');
-          print('  画像データ: $storedImageIds');
+
+          // 選択した画像を一時保存
+          final selectedImageIds = <String>[];
+          if (selectedImages.value.isNotEmpty) {
+            print('  選択された画像の保存: ${selectedImages.value.length}枚');
+            for (final image in selectedImages.value) {
+              final bytes = await image.readAsBytes();
+              final storedImage = await ref
+                  .read(imageRepositoryProvider)
+                  .saveImage(bytes, image.name);
+              selectedImageIds.add(storedImage.id);
+              print('    保存完了: ${image.name} -> ${storedImage.id}');
+            }
+          }
+
+          // 保存済みの画像と新規に選択した画像を結合
+          final storedImageIds =
+              storedImages.value.map((image) => image.id).toList();
+          final allImageIds = [...storedImageIds, ...selectedImageIds];
+          formData['images'] = allImageIds;
+
+          print('  画像データ:');
+          print('    保存済み: ${storedImageIds.length}枚');
+          print('    新規選択: ${selectedImageIds.length}枚');
+          print('    合計: ${allImageIds.length}枚');
+          print('    画像ID: $allImageIds');
 
           Navigator.push(
             context,
