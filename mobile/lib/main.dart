@@ -3,8 +3,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'view/page/home/home_screen.dart';
-import 'model/draft_item.dart';
-import 'model/repository/item_repository.dart';
+import 'model/entities/draft_item.dart';
+import 'model/repositories/local/item_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +24,7 @@ void main() async {
   runApp(
     ProviderScope(
       overrides: [
-        // ItemRepositoryの初期化済みインスタンスを提供
+        // ローカルストレージのリポジトリを初期化
         itemRepositoryProvider.overrideWithValue(repository),
       ],
       child: const MyApp(),

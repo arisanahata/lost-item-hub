@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../model/repository/image_repository.dart';
-import '../../../model/stored_image.dart';
+import '../../../model/entities/stored_image.dart';
+import '../../../model/repositories/local/image_repository.dart';
 import '../../../viewmodel/form_viewmodel.dart';
 import '../../component/form_button.dart';
 import '../../style.dart';
@@ -18,6 +20,7 @@ class HomeScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final drafts = ref.watch(draftListProvider);
+    final imageRepository = ref.read(imageRepositoryProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5), // フォーム画面と同じ背景色
@@ -195,12 +198,13 @@ class HomeScreen extends HookConsumerWidget {
                             Navigator.push(
                               context,
                               PageRouteBuilder(
-                                pageBuilder: (context, animation, secondaryAnimation) =>
-                                    LostItemEditScreen(
-                                      draftId: item.id,
-                                    ),
-                                transitionsBuilder:
-                                    (context, animation, secondaryAnimation, child) {
+                                pageBuilder:
+                                    (context, animation, secondaryAnimation) =>
+                                        LostItemEditScreen(
+                                  draftId: item.id,
+                                ),
+                                transitionsBuilder: (context, animation,
+                                    secondaryAnimation, child) {
                                   const begin = Offset(1.0, 0.0);
                                   const end = Offset.zero;
                                   const curve = Curves.easeInOut;
@@ -211,8 +215,10 @@ class HomeScreen extends HookConsumerWidget {
                                     child: child,
                                   );
                                 },
-                                transitionDuration: const Duration(milliseconds: 300),
-                                reverseTransitionDuration: const Duration(milliseconds: 300),
+                                transitionDuration:
+                                    const Duration(milliseconds: 300),
+                                reverseTransitionDuration:
+                                    const Duration(milliseconds: 300),
                               ),
                             );
                           },
@@ -224,14 +230,12 @@ class HomeScreen extends HookConsumerWidget {
                                   Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: // サムネイル画像
-                                        item.imagePaths != null &&
-                                                item.imagePaths!.isNotEmpty
+                                        item.imageIds != null &&
+                                                item.imageIds!.isNotEmpty
                                             ? FutureBuilder<StoredImage?>(
-                                                future: ref
-                                                    .read(
-                                                        imageRepositoryProvider)
+                                                future: imageRepository
                                                     .getImage(
-                                                        item.imagePaths!.first),
+                                                        item.imageIds!.first),
                                                 builder: (context, snapshot) {
                                                   if (snapshot.connectionState ==
                                                           ConnectionState
@@ -241,13 +245,15 @@ class HomeScreen extends HookConsumerWidget {
                                                       width: 100,
                                                       height: 100,
                                                       decoration: BoxDecoration(
+                                                        color: Colors.grey[100],
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(12),
-                                                        color: Colors.grey[100],
                                                       ),
-                                                      child:
-                                                          const CircularProgressIndicator(),
+                                                      child: const Center(
+                                                        child:
+                                                            CircularProgressIndicator(),
+                                                      ),
                                                     );
                                                   }
 
@@ -263,15 +269,12 @@ class HomeScreen extends HookConsumerWidget {
                                                           color: Colors.black
                                                               .withOpacity(0.1),
                                                           blurRadius: 8,
-                                                          offset: const Offset(
-                                                              0, 2),
+                                                          offset: const Offset(0, 2),
                                                         ),
                                                       ],
                                                       image: DecorationImage(
-                                                        image: MemoryImage(
-                                                            Uint8List.fromList(
-                                                                snapshot.data!
-                                                                    .bytes)),
+                                                        image: FileImage(
+                                                            File(snapshot.data!.filePath)),
                                                         fit: BoxFit.cover,
                                                       ),
                                                     ),
@@ -329,8 +332,8 @@ class HomeScreen extends HookConsumerWidget {
                                                   ],
                                                 ),
                                               ),
-                                              if (item.imagePaths != null &&
-                                                  item.imagePaths!.length > 1)
+                                              if (item.imageIds != null &&
+                                                  item.imageIds!.length > 1)
                                                 Container(
                                                   margin: const EdgeInsets.only(
                                                       left: 8),
@@ -357,7 +360,7 @@ class HomeScreen extends HookConsumerWidget {
                                                       ),
                                                       const SizedBox(width: 4),
                                                       Text(
-                                                        '${item.imagePaths!.length}枚',
+                                                        '${item.imageIds!.length}枚',
                                                         style: GoogleFonts
                                                             .notoSans(
                                                           fontSize: 12,
@@ -424,7 +427,8 @@ class HomeScreen extends HookConsumerWidget {
             PageRouteBuilder(
               pageBuilder: (context, animation, secondaryAnimation) =>
                   const LostItemFormScreen(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
                 const begin = Offset(1.0, 0.0);
                 const end = Offset.zero;
                 const curve = Curves.easeInOut;
@@ -440,7 +444,8 @@ class HomeScreen extends HookConsumerWidget {
             ),
           );
         },
-        extendedPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        extendedPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         icon: const Icon(
           Icons.add,
           size: 24,

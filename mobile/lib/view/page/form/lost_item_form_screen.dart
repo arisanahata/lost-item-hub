@@ -5,9 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data'; // import追加
-import '../../../model/draft_item.dart';
-import '../../../model/repository/image_repository.dart';
-import '../../../model/stored_image.dart';
+import 'package:path_provider/path_provider.dart'; // import追加
+import '../../../model/entities/draft_item.dart';
+import '../../../model/repositories/local/image_repository.dart';
+import '../../../model/entities/stored_image.dart';
+import '../../../util/image_storage.dart';
 import '../../../viewmodel/form_viewmodel.dart';
 import '../../sections/basic_section.dart';
 import '../../sections/date_section.dart';
@@ -140,11 +142,11 @@ class LostItemFormScreen extends HookConsumerWidget {
         // 画像の読み込み
         if (isEditing && initialFormData!['draft'] != null) {
           final draft = initialFormData!['draft'] as DraftItem;
-          if (draft.imagePaths != null && draft.imagePaths!.isNotEmpty) {
-            print('  画像の読み込みを開始: ${draft.imagePaths!.length}枚');
+          if (draft.imageIds != null && draft.imageIds!.isNotEmpty) {
+            print('  画像の読み込みを開始: ${draft.imageIds!.length}枚');
             ref
                 .read(formViewModelProvider.notifier)
-                .loadImages(draft.imagePaths!)
+                .loadImages(draft.imageIds!)
                 .then((loadedImages) {
               if (loadedImages.isNotEmpty) {
                 storedImages.value = loadedImages;
@@ -282,17 +284,13 @@ class LostItemFormScreen extends HookConsumerWidget {
 
           // 選択した画像を一時保存
           final selectedImageIds = <String>[];
-          if (selectedImages.value.isNotEmpty) {
-            print('  選択された画像の保存: ${selectedImages.value.length}枚');
-            for (final image in selectedImages.value) {
-              final bytes = await image.readAsBytes();
-              final storedImage = await ref
-                  .read(imageRepositoryProvider)
-                  .saveImage(bytes, image.name);
-              selectedImageIds.add(storedImage.id);
-              print('    保存完了: ${image.name} -> ${storedImage.id}');
-            }
-          }
+          print('  選択された画像の保存: ${selectedImages.value.length}枚');
+          final imageIds = await ImageStorage.saveImages(
+            selectedImages.value,
+            ref.read(imageRepositoryProvider),
+          );
+          selectedImageIds.addAll(imageIds);
+          print('  画像の保存完了: ${imageIds.length}枚');
 
           // 保存済みの画像と新規に選択した画像を結合
           final storedImageIds =
@@ -380,13 +378,39 @@ class LostItemFormScreen extends HookConsumerWidget {
                   isEditing: isEditing,
                   totalAmount: totalAmount,
                 ),
-                ImageSection(
-                  initialImages: storedImages.value,
-                  onImagesChanged: (images) {
-                    selectedImages.value = images;
-                  },
-                  onStoredImagesChanged: (images) {
-                    storedImages.value = images;
+                FutureBuilder<List<StoredImage>>(
+                  future: ImageStorage.getImages(
+                      initialFormData?['draft'] != null
+                          ? (initialFormData!['draft'] as DraftItem).imageIds ??
+                              []
+                          : [],
+                      ref.read(imageRepositoryProvider)),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting ||
+                        !snapshot.hasData) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+
+                    return ImageSection(
+                      initialImages: snapshot.data,
+                      onImagesChanged: (images) async {
+                        final imageIds = await ImageStorage.saveImages(
+                          images,
+                          ref.read(imageRepositoryProvider),
+                        );
+                        ref
+                            .read(formViewModelProvider.notifier)
+                            .addImages(imageIds);
+                      },
+                      onStoredImagesChanged: (images) {
+                        final imageIds = images.map((image) => image.id).toList();
+                        ref
+                            .read(formViewModelProvider.notifier)
+                            .removeImage(imageIds);
+                      },
+                    );
                   },
                 ),
                 const SizedBox(height: 32),

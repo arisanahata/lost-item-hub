@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'lost_item.dart';
+part of 'entities/lost_item.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator

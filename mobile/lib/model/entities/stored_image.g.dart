@@ -8,7 +8,7 @@ part of 'stored_image.dart';
 
 class StoredImageAdapter extends TypeAdapter<StoredImage> {
   @override
-  final int typeId = 1;
+  final int typeId = 2;
 
   @override
   StoredImage read(BinaryReader reader) {
@@ -18,23 +18,20 @@ class StoredImageAdapter extends TypeAdapter<StoredImage> {
     };
     return StoredImage(
       id: fields[0] as String,
-      bytes: (fields[1] as List).cast<int>(),
-      fileName: fields[2] as String,
-      createdAt: fields[3] as DateTime,
+      filePath: fields[1] as String,
+      createdAt: fields[2] as DateTime,
     );
   }
 
   @override
   void write(BinaryWriter writer, StoredImage obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.bytes)
+      ..write(obj.filePath)
       ..writeByte(2)
-      ..write(obj.fileName)
-      ..writeByte(3)
       ..write(obj.createdAt);
   }
 
@@ -48,3 +45,21 @@ class StoredImageAdapter extends TypeAdapter<StoredImage> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_$StoredImageImpl _$$StoredImageImplFromJson(Map<String, dynamic> json) =>
+    _$StoredImageImpl(
+      id: json['id'] as String,
+      filePath: json['filePath'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+
+Map<String, dynamic> _$$StoredImageImplToJson(_$StoredImageImpl instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'filePath': instance.filePath,
+      'createdAt': instance.createdAt.toIso8601String(),
+    };

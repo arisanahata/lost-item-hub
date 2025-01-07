@@ -5,8 +5,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../model/stored_image.dart';
-import '../../model/repository/image_repository.dart';
+import '../../model/entities/stored_image.dart';
+import '../../model/repositories/local/image_repository.dart';
 import '../component/section_card.dart';
 
 class ImageSection extends HookConsumerWidget {
@@ -160,31 +160,17 @@ class ImageSection extends HookConsumerWidget {
                     return FutureBuilder<StoredImage?>(
                       future: imageRepository.getImage(image.id),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
+                        if (snapshot.connectionState == ConnectionState.waiting ||
+                            !snapshot.hasData) {
                           return Container(
                             width: 100,
                             height: 100,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.grey[100],
                             ),
                             child: const Center(
                               child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-
-                        if (snapshot.hasError || !snapshot.hasData) {
-                          return Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey[200],
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.error, color: Colors.red),
                             ),
                           );
                         }
@@ -193,12 +179,7 @@ class ImageSection extends HookConsumerWidget {
                           width: 100,
                           height: 100,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            image: DecorationImage(
-                              image: MemoryImage(
-                                  Uint8List.fromList(snapshot.data!.bytes)),
-                              fit: BoxFit.cover,
-                            ),
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.1),
@@ -206,6 +187,10 @@ class ImageSection extends HookConsumerWidget {
                                 offset: const Offset(0, 2),
                               ),
                             ],
+                            image: DecorationImage(
+                              image: FileImage(File(snapshot.data!.filePath)),
+                              fit: BoxFit.cover,
+                            ),
                           ),
                           child: Stack(
                             clipBehavior: Clip.none,

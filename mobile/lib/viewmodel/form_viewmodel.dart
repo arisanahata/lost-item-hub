@@ -1,11 +1,11 @@
 import 'dart:io';
-
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import '../model/draft_item.dart';
-import '../model/repository/item_repository.dart';
-import '../model/repository/image_repository.dart';
-import '../model/stored_image.dart';
+import '../model/entities/draft_item.dart';
+import '../model/repositories/api/item_repository.dart';
+import '../model/repositories/local/item_repository.dart';
+import '../model/repositories/local/image_repository.dart';
+import '../model/entities/stored_image.dart';
 import '../util/image_storage.dart';
 
 // ドラフト一覧を監視するプロバイダー
@@ -15,290 +15,165 @@ final draftListProvider = StreamProvider<List<DraftItem>>((ref) {
 
 // 特定のドラフトを監視するプロバイダー
 final draftProvider = StreamProvider.family<DraftItem?, String>((ref, id) {
-  return ref.watch(itemRepositoryProvider).watchDraft(id);
+  final draft = ref.watch(itemRepositoryProvider).getDraft(id);
+  return Stream.value(draft);
 });
 
 // フォーム操作を管理するプロバイダー
 final formViewModelProvider =
     StateNotifierProvider<FormViewModel, AsyncValue<void>>((ref) {
-  return FormViewModel(
-    ref.watch(itemRepositoryProvider),
-    ref.watch(imageRepositoryProvider),
-  );
+  return FormViewModel(ref);
 });
 
 class FormViewModel extends StateNotifier<AsyncValue<void>> {
-  final ItemRepository _repository;
-  final ImageRepository _imageRepository;
+  final Ref ref;
+  late final ItemRepository _repository;
+  late final ImageRepository _imageRepository;
+  late final ItemApiRepository _apiRepository;
 
-  FormViewModel(this._repository, this._imageRepository)
-      : super(const AsyncValue.data(null));
+  FormViewModel(this.ref) : super(const AsyncValue.data(null)) {
+    _repository = ref.read(itemRepositoryProvider);
+    _imageRepository = ref.read(imageRepositoryProvider);
+    _apiRepository = ref.read(itemApiRepositoryProvider);
 
-  Future<void> submitForm(
-      Map<String, dynamic> formData, String? draftId) async {
+    print('\nFormViewModel - 初期化:');
+    print('  APIリポジトリ: $_apiRepository');
+    print('  APIリポジトリのbaseUrl: ${_apiRepository.baseUrl}');
+  }
+
+  Future<void> submitForm(Map<String, dynamic> formData, List<String> imageIds,
+      {String? draftId}) async {
     try {
       state = const AsyncValue.loading();
+      print('FormViewModel - フォーム送信を開始');
 
-      // TODO: APIへの送信処理
-      await Future.delayed(const Duration(seconds: 1));
+      // 画像の保存処理
+      final List<String> savedImageIds = [];
+      if (imageIds.isNotEmpty) {
+        print('  画像の保存を開始: ${imageIds.length}枚');
+        savedImageIds.addAll(imageIds);
+      }
 
-      // 送信成功後、下書きを削除
+      // APIに送信
+      print('  APIにデータを送信');
+      await _apiRepository.createItem(
+        name: formData['itemName']?.toString() ?? '',
+        color: formData['itemColor']?.toString(),
+        description: formData['itemDescription']?.toString(),
+        needsReceipt: formData['needsReceipt'] as bool? ?? false,
+        routeName: formData['routeName']?.toString() ?? '',
+        vehicleNumber: formData['vehicleNumber']?.toString() ?? '',
+        otherLocation: formData['otherLocation']?.toString(),
+        images: savedImageIds,
+        finderName: formData['finderName']?.toString() ?? '',
+        finderContact: formData['finderPhone']?.toString(),
+        finderPostalCode: formData['postalCode']?.toString(),
+        finderAddress: formData['finderAddress']?.toString(),
+        cash: formData['cash'] as int?,
+      );
+      print('  API送信完了');
+
+      // 下書きの削除
       if (draftId != null) {
+        print('  下書きを削除: $draftId');
         await _repository.deleteDraft(draftId);
       }
 
       state = const AsyncValue.data(null);
-    } catch (e, stack) {
-      print('FormViewModel - 送信エラー: $e');
-      state = AsyncValue.error(e, stack);
+      print('FormViewModel - フォーム送信完了\n');
+    } catch (e, s) {
+      print('FormViewModel - エラー発生: $e');
+      state = AsyncValue.error(e, s);
+      rethrow;
     }
   }
 
-  Future<void> saveDraft(Map<String, dynamic> formData, List<String> imagePaths,
+  Future<void> saveDraft(Map<String, dynamic> formData, List<String> imageIds,
       {String? draftId}) async {
     try {
       state = const AsyncValue.loading();
       print('FormViewModel - 下書き保存を開始');
 
-      // 画像の保存処理
-      final List<String> savedImageIds = [];
-      if (imagePaths.isNotEmpty) {
-        print('  画像データを処理: ${imagePaths.length}枚');
-        
-        for (var path in imagePaths) {
-          // 既存の画像IDの場合はそのまま追加
-          if (!path.startsWith('/')) {
-            savedImageIds.add(path);
-            print('  既存の画像を追加: $path');
-            continue;
-          }
-
-          // 新しい画像の場合はファイルを保存
-          final file = File(path);
-          if (await file.exists()) {
-            final bytes = await file.readAsBytes();
-            final fileName = path.split('/').last;
-            final savedImage = await _imageRepository.saveImage(bytes, fileName);
-            savedImageIds.add(savedImage.id);
-            print('  新しい画像を保存: ${savedImage.id}');
-          } else {
-            print('  画像ファイルが存在しません: $path');
-          }
-        }
-      }
-
-      // 既存のドラフトを取得（更新の場合）
-      DateTime createdAt = DateTime.now();
-      if (draftId != null) {
-        final existingDraft = await _repository.getDraft(draftId);
-        if (existingDraft != null) {
-          createdAt = existingDraft.createdAt;
-          // 既存の画像を削除（新しい画像で上書き）
-          if (existingDraft.imagePaths != null) {
-            final imagesToDelete = existingDraft.imagePaths!
-                .where((id) => !savedImageIds.contains(id))
-                .toList();
-            if (imagesToDelete.isNotEmpty) {
-              print('  不要な画像を削除: ${imagesToDelete.length}枚');
-              await _imageRepository.deleteImages(imagesToDelete);
-            }
-          }
-        }
-      }
-
+      final now = DateTime.now();
       final draft = DraftItem(
         id: draftId ?? const Uuid().v4(),
         formData: formData,
-        createdAt: createdAt,
-        updatedAt: DateTime.now(),
-        imagePaths: savedImageIds,
+        imageIds: imageIds,
+        createdAt: now,
+        updatedAt: now,
       );
 
-      print('  下書きを保存:');
-      print('    ID: ${draft.id}');
-      print('    画像数: ${savedImageIds.length}枚');
-      print('    画像ID: $savedImageIds');
-
+      // 下書きを保存
+      print('  下書きを保存: ${draft.id}');
       await _repository.saveDraft(draft);
-      print('  下書き保存完了');
 
       state = const AsyncValue.data(null);
-    } catch (e, stack) {
-      print('FormViewModel - 下書き保存エラー:');
-      print('  エラー: $e');
-      print('  スタックトレース: $stack');
-      state = AsyncValue.error(e, stack);
+      print('FormViewModel - 下書き保存完了\n');
+    } catch (e, s) {
+      print('FormViewModel - エラー発生: $e');
+      state = AsyncValue.error(e, s);
       rethrow;
     }
   }
 
-  Future<void> updateDraft(String id, Map<String, dynamic> formData) async {
+  Future<List<StoredImage>> loadImages(List<String> imageIds) async {
     try {
-      state = const AsyncValue.loading();
-      print('FormViewModel - 下書き更新を開始: $id');
-
-      // 既存のドラフトを取得
-      final existingDraft = await _repository.getDraft(id);
-      if (existingDraft == null) throw Exception('Draft not found');
-
-      // 既存の画像を削除
-      if (existingDraft.imagePaths != null) {
-        print('  既存の画像を削除: ${existingDraft.imagePaths!.length}枚');
-        await _imageRepository.deleteImages(existingDraft.imagePaths!);
-      }
-
-      // 新しい画像を保存
-      final imagePaths = formData['images'] as List<String>?;
-      print('  新しい画像を処理: ${imagePaths?.length ?? 0}枚');
-
-      List<String>? savedImageIds;
-      if (imagePaths != null && imagePaths.isNotEmpty) {
-        print('  画像を保存');
-        savedImageIds = [];
-        for (var path in imagePaths) {
-          // 既存の画像IDの場合はそのまま追加
-          if (!path.startsWith('/')) {
-            savedImageIds.add(path);
-            print('  既存の画像を追加: $path');
-            continue;
-          }
-
-          // 新しい画像の場合はファイルを保存
-          final file = File(path);
-          if (await file.exists()) {
-            final bytes = await file.readAsBytes();
-            final fileName = path.split('/').last;
-            final savedImage =
-                await _imageRepository.saveImage(bytes, fileName);
-            savedImageIds.add(savedImage.id);
-            print('  新しい画像を保存: ${savedImage.id}');
-          } else {
-            print('  画像ファイルが存在しません: $path');
-          }
-        }
-      }
-
-      // フォームデータから画像を削除
-      formData.remove('images');
-
-      // ドラフトを更新
-      final updatedDraft = DraftItem(
-        id: id,
-        formData: formData,
-        createdAt: existingDraft.createdAt,
-        updatedAt: DateTime.now(),
-        imagePaths: savedImageIds,
-      );
-
-      print('  下書きを更新:');
-      print('    画像数: ${savedImageIds?.length ?? 0}枚');
-
-      await _repository.updateDraft(id, updatedDraft);
-      state = const AsyncValue.data(null);
-      print('  下書き更新完了');
-    } catch (e, stack) {
-      print('FormViewModel - 下書き更新エラー: $e');
-      state = AsyncValue.error(e, stack);
+      print('FormViewModel - 画像の読み込みを開始: ${imageIds.length}枚');
+      final images = await ImageStorage.getImages(imageIds, _imageRepository);
+      print('  画像の読み込み完了: ${images.length}枚');
+      return images;
+    } catch (e) {
+      print('FormViewModel - 画像の読み込みに失敗: $e');
+      rethrow;
     }
   }
 
   Future<void> deleteDraft(String id) async {
     try {
       state = const AsyncValue.loading();
+      print('FormViewModel - 下書き削除を開始: $id');
 
-      // ドラフトの画像を削除
-      final draft = await _repository.getDraft(id);
-      if (draft?.imagePaths != null) {
-        print('  画像を削除: ${draft!.imagePaths!.length}枚');
-        await _imageRepository.deleteImages(draft.imagePaths!);
+      final draft = _repository.getDraft(id);
+      if (draft != null && draft.imageIds != null) {
+        // 関連する画像を削除
+        print('  関連画像を削除: ${draft.imageIds!.length}枚');
+        for (final imageId in draft.imageIds!) {
+          await _imageRepository.deleteImage(imageId);
+        }
       }
 
       await _repository.deleteDraft(id);
+      print('FormViewModel - 下書き削除完了');
+
       state = const AsyncValue.data(null);
-      print('  下書き削除完了');
     } catch (e, stack) {
-      print('FormViewModel - 下書き削除エラー: $e');
-      state = AsyncValue.error(e, stack);
-    }
-  }
-
-  // 画像の追加
-  Future<List<String>> addImages(
-      List<String> newImagePaths, List<String>? existingImagePaths) async {
-    try {
-      List<String> allImageIds = [...(existingImagePaths ?? [])];
-
-      for (var path in newImagePaths) {
-        // 既存の画像IDの場合はスキップ
-        if (!path.startsWith('/')) continue;
-
-        // 新しい画像の場合はファイルを保存
-        final file = File(path);
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          final fileName = path.split('/').last;
-          final savedImage = await _imageRepository.saveImage(bytes, fileName);
-          allImageIds.add(savedImage.id);
-          print('  新しい画像を保存: ${savedImage.id}');
-        } else {
-          print('  画像ファイルが存在しません: $path');
-        }
-      }
-
-      return allImageIds;
-    } catch (e) {
-      print('FormViewModel - 画像追加エラー: $e');
-      rethrow;
-    }
-  }
-
-  // 画像の削除
-  Future<List<String>> removeImage(
-      String imageId, List<String> currentImageIds) async {
-    try {
-      final newImageIds = List<String>.from(currentImageIds);
-      newImageIds.remove(imageId);
-
-      // 画像ファイルの削除
-      await _imageRepository.deleteImage(imageId);
-      print('  画像を削除: $imageId');
-
-      return newImageIds;
-    } catch (e) {
-      print('FormViewModel - 画像削除エラー: $e');
-      rethrow;
-    }
-  }
-
-  Future<List<StoredImage>> loadImages(List<String> imageIds) async {
-    print('FormViewModel - 画像読み込みを開始:');
-    print('  読み込む画像ID: $imageIds');
-    
-    try {
-      final loadedImages = <StoredImage>[];
-      for (var id in imageIds) {
-        // ファイルパスの場合はスキップ
-        if (id.startsWith('/')) {
-          print('  無効な画像ID (ファイルパス): $id');
-          continue;
-        }
-        
-        print('  画像を読み込み中: $id');
-        final image = await _imageRepository.getImage(id);
-        if (image != null) {
-          loadedImages.add(image);
-          print('    読み込み成功: ${image.id} (${image.bytes.length} bytes)');
-        } else {
-          print('    読み込み失敗: $id');
-        }
-      }
-      print('  読み込み完了: ${loadedImages.length}枚の画像を読み込みました');
-      return loadedImages;
-    } catch (e, stack) {
-      print('FormViewModel - 画像読み込みエラー:');
+      print('FormViewModel - 下書き削除エラー:');
       print('  エラー: $e');
       print('  スタックトレース: $stack');
-      return [];
+      state = AsyncValue.error(e, stack);
+      rethrow;
+    }
+  }
+
+  Future<void> removeImage(List<String> imageIds) async {
+    try {
+      print('FormViewModel - 画像の削除を開始: ${imageIds.length}枚');
+      await ImageStorage.deleteImages(imageIds, _imageRepository);
+      print('FormViewModel - 画像の削除完了');
+    } catch (e) {
+      print('FormViewModel - 画像の削除に失敗: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<String>> addImages(List<String> imageIds) async {
+    try {
+      print('FormViewModel - 画像の追加を開始');
+      print('  新規画像数: ${imageIds.length}枚');
+      return imageIds;
+    } catch (e) {
+      print('FormViewModel - 画像の追加に失敗: $e');
+      rethrow;
     }
   }
 }

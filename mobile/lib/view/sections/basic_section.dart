@@ -111,22 +111,14 @@ class BasicSection extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
-            onChanged: (value) {
-              // 値が変更されたときだけ通知
-              if (value != formKey.currentState?.fields['itemColor']?.value) {
-                print('BasicSection - 色が変更されました: $value');
-                onFieldChanged?.call('itemColor', value);
-              }
-            },
+            onChanged: (value) => onFieldChanged?.call('itemColor', value),
           ),
           const SizedBox(height: 16),
           FormBuilderTextField(
             name: 'itemDescription',
             initialValue: initialData?['itemDescription'],
-            minLines: 3,
-            maxLines: null,
             decoration: InputDecoration(
-              labelText: '特徴など',
+              labelText: '特徴・状態',
               labelStyle: GoogleFonts.notoSans(fontSize: 16),
               prefixIcon: Icon(Icons.description, color: Colors.grey[600]),
               filled: true,
@@ -140,13 +132,8 @@ class BasicSection extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
-            onChanged: (value) {
-              // 値が変更されたときだけ通知
-              if (value != formKey.currentState?.fields['itemDescription']?.value) {
-                print('BasicSection - 特徴などが変更されました: $value');
-                onFieldChanged?.call('itemDescription', value);
-              }
-            },
+            maxLines: 3,
+            onChanged: (value) => onFieldChanged?.call('itemDescription', value),
           ),
           const SizedBox(height: 16),
           FormBuilderRadioGroup(

@@ -1,12 +1,15 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../model/form_data.dart';
-import '../../../model/stored_image.dart';
-import '../../../model/repository/image_repository.dart';
+import '../../../model/entities/form_data.dart';
+import '../../../model/entities/stored_image.dart';
+import '../../../model/repositories/local/image_repository.dart';
+import '../../../viewmodel/form_viewmodel.dart';
 import '../../style.dart';
 import '../../component/section_card.dart';
 
@@ -176,24 +179,19 @@ class LostItemConfirmScreen extends HookConsumerWidget {
           _buildInfoRow(
             Icons.gavel,
             '権利放棄',
-            formData['hasRightsWaiver'] == true
-                ? '一切の権利を放棄'
-                : '権利を保持する',
+            formData['hasRightsWaiver'] == true ? '一切の権利を放棄' : '権利を保持する',
           ),
           if (formData['hasRightsWaiver'] == false) ...[
             _buildInfoRow(
               Icons.check_circle_outline,
               '保持する権利',
               _formatRightsOptions(
-                  formData['rightsOptions'] as List<dynamic>? ??
-                      []),
+                  formData['rightsOptions'] as List<dynamic>? ?? []),
             ),
             _buildInfoRow(
               Icons.person_outline,
               '氏名等告知の同意',
-              formData['hasConsentToDisclose'] == true
-                  ? '同意する'
-                  : '同意しない',
+              formData['hasConsentToDisclose'] == true ? '同意する' : '同意しない',
             ),
           ],
         ],
@@ -245,7 +243,7 @@ class LostItemConfirmScreen extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (imageIds.isNotEmpty)
+          if (imageIds != null && imageIds.isNotEmpty)
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -260,13 +258,14 @@ class LostItemConfirmScreen extends HookConsumerWidget {
                     print('    エラー: ${snapshot.error}');
                     print('    データ: ${snapshot.data}');
 
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                    if (snapshot.connectionState == ConnectionState.waiting ||
+                        !snapshot.hasData) {
                       return Container(
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.grey[100],
                         ),
                         child: const Center(
                           child: CircularProgressIndicator(),
@@ -274,31 +273,11 @@ class LostItemConfirmScreen extends HookConsumerWidget {
                       );
                     }
 
-                    if (snapshot.hasError || !snapshot.hasData) {
-                      print('    エラーまたはデータなし');
-                      return Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey[200],
-                        ),
-                        child: const Center(
-                          child: Icon(Icons.error, color: Colors.red),
-                        ),
-                      );
-                    }
-
-                    print('    画像データ: ${snapshot.data!.bytes.length} bytes');
                     return Container(
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        image: DecorationImage(
-                          image: MemoryImage(Uint8List.fromList(snapshot.data!.bytes)),
-                          fit: BoxFit.cover,
-                        ),
+                        borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -306,6 +285,10 @@ class LostItemConfirmScreen extends HookConsumerWidget {
                             offset: const Offset(0, 2),
                           ),
                         ],
+                        image: DecorationImage(
+                          image: FileImage(File(snapshot.data!.filePath)),
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     );
                   },
@@ -317,31 +300,38 @@ class LostItemConfirmScreen extends HookConsumerWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Future<void> onSubmit(BuildContext context, WidgetRef ref) async {
+    final formViewModel = ref.read(formViewModelProvider.notifier);
     final isSubmitting = useState(false);
-    final imageRepository = ref.watch(imageRepositoryProvider);
 
-    Future<void> onSubmit() async {
-      try {
-        isSubmitting.value = true;
-        // TODO: フォームの送信処理
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('拾得物の登録が完了しました')),
-          );
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('エラーが発生しました: $e')),
-          );
-        }
-      } finally {
-        isSubmitting.value = false;
+    if (isSubmitting.value) return;
+
+    try {
+      isSubmitting.value = true;
+      final imageIds = formData['images'] as List<dynamic>? ?? [];
+      await formViewModel.submitForm(formData, List<String>.from(imageIds),
+          draftId: draftId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('拾得物の登録が完了しました')),
+        );
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('エラーが発生しました: $e')),
+        );
       }
     }
+    if (context.mounted) {
+      isSubmitting.value = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final imageRepository = ref.watch(imageRepositoryProvider);
 
     return Scaffold(
       backgroundColor: AppStyle.backgroundColor,
@@ -405,22 +395,12 @@ class LostItemConfirmScreen extends HookConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: isSubmitting.value ? null : onSubmit,
+                    onPressed: () => onSubmit(context, ref),
                     style: AppStyle.primaryButtonStyle,
-                    child: isSubmitting.value
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            '登録する',
-                            style: AppStyle.buttonTextStyle,
-                          ),
+                    child: Text(
+                      '登録する',
+                      style: AppStyle.buttonTextStyle,
+                    ),
                   ),
                 ),
               ],
