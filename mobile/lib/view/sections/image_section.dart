@@ -146,168 +146,191 @@ class ImageSection extends HookConsumerWidget {
         children: [
           if (storedImages.value.isNotEmpty ||
               selectedImages.value.isNotEmpty) ...[
-            GridView.count(
-              crossAxisCount: 4,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 1,
-              children: [
-                ...storedImages.value.map((image) {
-                  return FutureBuilder<StoredImage?>(
-                    future: imageRepository.getImage(image.id),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[200],
-                          ),
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      }
-
-                      if (snapshot.hasError || !snapshot.hasData) {
-                        return Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[200],
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.error, color: Colors.red),
-                          ),
-                        );
-                      }
-
-                      return Stack(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.count(
+                crossAxisCount: 5,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1,
+                children: [
+                  ...storedImages.value.map((image) {
+                    return FutureBuilder<StoredImage?>(
+                      future: imageRepository.getImage(image.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Container(
+                            width: 100,
+                            height: 100,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: MemoryImage(
-                                    Uint8List.fromList(snapshot.data!.bytes)),
-                                fit: BoxFit.cover,
-                              ),
+                              color: Colors.grey[200],
                             ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.5),
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                onPressed: () {
-                                  final newImages = [...storedImages.value];
-                                  newImages.remove(image);
-                                  storedImages.value = newImages;
-                                  onStoredImagesChanged?.call(newImages);
-                                },
-                              ),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                }),
-                ...selectedImages.value.map((image) {
-                  return FutureBuilder<Uint8List>(
-                    future: image.readAsBytes(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[200],
-                          ),
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      }
+                          );
+                        }
 
-                      if (snapshot.hasError) {
-                        return Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[200],
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.error, color: Colors.red),
-                          ),
-                        );
-                      }
-
-                      return Stack(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
+                        if (snapshot.hasError || !snapshot.hasData) {
+                          return Container(
+                            width: 100,
+                            height: 100,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: MemoryImage(snapshot.data!),
-                                fit: BoxFit.cover,
-                              ),
+                              color: Colors.grey[200],
                             ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.5),
-                                shape: BoxShape.circle,
+                            child: const Center(
+                              child: Icon(Icons.error, color: Colors.red),
+                            ),
+                          );
+                        }
+
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: MemoryImage(
+                                  Uint8List.fromList(snapshot.data!.bytes)),
+                              fit: BoxFit.cover,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 16,
+                            ],
+                          ),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned(
+                                top: -8,
+                                right: -8,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.close),
+                                    color: Colors.white,
+                                    iconSize: 20,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 20,
+                                      minHeight: 20,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () {
+                                      final newImages = [...storedImages.value];
+                                      newImages.remove(image);
+                                      storedImages.value = newImages;
+                                      onStoredImagesChanged?.call(newImages);
+                                    },
+                                  ),
                                 ),
-                                onPressed: () {
-                                  final newImages = [...selectedImages.value];
-                                  newImages.remove(image);
-                                  selectedImages.value = newImages;
-                                  onImagesChanged?.call(newImages);
-                                },
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      );
-                    },
-                  );
-                }),
-              ],
+                        );
+                      },
+                    );
+                  }),
+                  ...selectedImages.value.map((image) {
+                    return FutureBuilder<Uint8List>(
+                      future: image.readAsBytes(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.grey[200],
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          return Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.grey[200],
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.error, color: Colors.red),
+                            ),
+                          );
+                        }
+
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: MemoryImage(snapshot.data!),
+                              fit: BoxFit.cover,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned(
+                                top: -8,
+                                right: -8,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.close),
+                                    color: Colors.white,
+                                    iconSize: 20,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () {
+                                      final newImages = [
+                                        ...selectedImages.value
+                                      ];
+                                      newImages.remove(image);
+                                      selectedImages.value = newImages;
+                                      onImagesChanged?.call(newImages);
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
           ],
