@@ -308,15 +308,15 @@ class LostItemConfirmScreen extends HookConsumerWidget {
 
   Future<void> onSubmit(BuildContext context, WidgetRef ref) async {
     final formViewModel = ref.read(formViewModelProvider.notifier);
-    final isSubmitting = useState(false);
-
-    if (isSubmitting.value) return;
 
     try {
-      isSubmitting.value = true;
       final imageIds = formData['images'] as List<dynamic>? ?? [];
-      await formViewModel.submitForm(formData, List<String>.from(imageIds),
-          draftId: draftId);
+      await formViewModel.submitForm(
+        formData, 
+        List<String>.from(imageIds),
+        draftId: draftId
+      );
+      
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('拾得物の登録が完了しました')),
@@ -330,14 +330,13 @@ class LostItemConfirmScreen extends HookConsumerWidget {
         );
       }
     }
-    if (context.mounted) {
-      isSubmitting.value = false;
-    }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final imageRepository = ref.watch(imageRepositoryProvider);
+    final formState = ref.watch(formViewModelProvider);
+    final isSubmitting = formState is AsyncLoading;
 
     return Scaffold(
       backgroundColor: AppStyle.backgroundColor,
@@ -349,69 +348,63 @@ class LostItemConfirmScreen extends HookConsumerWidget {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
+          Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildBasicSection(),
+                      _buildLocationSection(),
+                      _buildDateSection(),
+                      _buildMemoSection(),
+                      _buildContactSection(),
+                      _buildImageSection(ref),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildMemoSection(),
-                    const SizedBox(height: 16),
-                    _buildContactSection(),
-                    const SizedBox(height: 16),
-                    _buildDateSection(),
-                    const SizedBox(height: 16),
-                    _buildLocationSection(),
-                    const SizedBox(height: 16),
-                    _buildBasicSection(),
-                    const SizedBox(height: 16),
-                    _buildImageSection(ref),
-                    const SizedBox(height: 32),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, -2),
+                    ),
                   ],
                 ),
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(
-                  color: Colors.grey[200]!,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: AppStyle.secondaryButtonStyle,
-                    child: Text(
-                      '修正する',
-                      style: AppStyle.secondaryButtonTextStyle,
+                child: SafeArea(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: isSubmitting 
+                          ? null 
+                          : () => onSubmit(context, ref),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: Text(
+                        isSubmitting ? '送信中...' : '登録する',
+                        style: GoogleFonts.notoSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => onSubmit(context, ref),
-                    style: AppStyle.primaryButtonStyle,
-                    child: Text(
-                      '登録する',
-                      style: AppStyle.buttonTextStyle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
+          if (isSubmitting)
+            const Center(
+              child: CircularProgressIndicator(),
+            ),
         ],
       ),
     );

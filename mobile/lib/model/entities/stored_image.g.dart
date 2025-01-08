@@ -20,7 +20,7 @@ class StoredImageAdapter extends TypeAdapter<StoredImage> {
       id: fields[0] as String,
       filePath: fields[1] as String,
       fileName: fields[2] as String,
-      createdAtMillis: fields[3] as int? ?? 0,
+      createdAtMillis: fields[3] as int,
     );
   }
 
