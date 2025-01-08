@@ -1,10 +1,11 @@
 import 'package:hive/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'stored_image.dart';
 
 part 'draft_item.g.dart';
 
 @HiveType(typeId: 0)
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class DraftItem {
   @HiveField(0)
   final String id;
@@ -21,12 +22,16 @@ class DraftItem {
   @HiveField(4)
   final List<String>? imageIds;
 
+  @JsonKey(ignore: true) // HiveFieldを削除
+  final List<StoredImage>? storedImages;
+
   const DraftItem({
     required this.id,
     required this.formData,
     required this.createdAt,
     required this.updatedAt,
     this.imageIds,
+    this.storedImages,
   });
 
   DraftItem copyWith({
@@ -35,6 +40,7 @@ class DraftItem {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<String>? imageIds,
+    List<StoredImage>? storedImages,
   }) {
     return DraftItem(
       id: id ?? this.id,
@@ -42,6 +48,7 @@ class DraftItem {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       imageIds: imageIds ?? this.imageIds,
+      storedImages: storedImages ?? this.storedImages,
     );
   }
 

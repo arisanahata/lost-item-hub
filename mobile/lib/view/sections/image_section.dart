@@ -160,7 +160,8 @@ class ImageSection extends HookConsumerWidget {
                     return FutureBuilder<StoredImage?>(
                       future: imageRepository.getImage(image.id),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting ||
+                        if (snapshot.connectionState ==
+                                ConnectionState.waiting ||
                             !snapshot.hasData) {
                           return Container(
                             width: 100,

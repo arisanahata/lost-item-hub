@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../model/entities/form_data.dart';
 import '../../../model/entities/stored_image.dart';
 import '../../../model/repositories/local/image_repository.dart';
+import '../../../util/image_storage.dart';
 import '../../../viewmodel/form_viewmodel.dart';
 import '../../style.dart';
 import '../../component/section_card.dart';
@@ -243,57 +244,62 @@ class LostItemConfirmScreen extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (imageIds != null && imageIds.isNotEmpty)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: List<String>.from(imageIds).map((imageId) {
-                print('  画像を表示: $imageId');
-                return FutureBuilder<StoredImage?>(
-                  future: ref.read(imageRepositoryProvider).getImage(imageId),
-                  builder: (context, snapshot) {
-                    print('  画像の読み込み状態:');
-                    print('    ID: $imageId');
-                    print('    状態: ${snapshot.connectionState}');
-                    print('    エラー: ${snapshot.error}');
-                    print('    データ: ${snapshot.data}');
+          if (imageIds.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.count(
+                crossAxisCount: 5,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1,
+                children: imageIds.map((id) {
+                  return FutureBuilder<List<StoredImage>>(
+                    future: ImageStorage.getImages(
+                      [id.toString()],
+                      ref.read(imageRepositoryProvider),
+                    ),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting ||
+                          !snapshot.hasData ||
+                          snapshot.data!.isEmpty) {
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[100],
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
 
-                    if (snapshot.connectionState == ConnectionState.waiting ||
-                        !snapshot.hasData) {
+                      final image = snapshot.data!.first;
                       return Container(
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          color: Colors.grey[100],
-                        ),
-                        child: const Center(
-                          child: CircularProgressIndicator(),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                          image: DecorationImage(
+                            image: FileImage(File(image.filePath)),
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       );
-                    }
-
-                    return Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                        image: DecorationImage(
-                          image: FileImage(File(snapshot.data!.filePath)),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              }).toList(),
+                    },
+                  );
+                }).toList(),
+              ),
             ),
         ],
       ),
@@ -409,5 +415,15 @@ class LostItemConfirmScreen extends HookConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class LostItem {
+  final List<String> images;
+
+  LostItem({required this.images});
+
+  factory LostItem.fromJson(Map<String, dynamic> json) {
+    return LostItem(images: json['images'] ?? []);
   }
 }

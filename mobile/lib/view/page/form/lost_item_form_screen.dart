@@ -213,26 +213,26 @@ class LostItemFormScreen extends HookConsumerWidget {
           }
 
           print('\n  画像データの処理:');
+          // 保存済みの画像IDと新規画像のパスを結合
+          final storedImagePaths =
+              storedImages.value.map((image) => image.filePath).toList();
           final selectedImagePaths =
               selectedImages.value.map((file) => file.path).toList();
-          final storedImagePaths =
-              storedImages.value.map((image) => image.id).toList();
           final allImagePaths = [...storedImagePaths, ...selectedImagePaths];
 
-          print('    選択された画像: ${selectedImagePaths.length}枚');
           print('    保存済みの画像: ${storedImagePaths.length}枚');
-          print('    保存する画像: ${allImagePaths.length}枚');
+          print('    新規選択: ${selectedImagePaths.length}枚');
+          print('    合計: ${allImagePaths.length}枚');
           print('    画像パス: $allImagePaths');
 
+          // 下書きを保存
           if (isEditing && draftId != null) {
-            // 上書き保存
             print('上書き保存を実行');
             await ref
                 .read(formViewModelProvider.notifier)
                 .saveDraft(formData, allImagePaths, draftId: draftId);
             print('上書き保存完了');
           } else {
-            // 新規の下書き保存
             print('新規保存を実行');
             await ref
                 .read(formViewModelProvider.notifier)
@@ -378,40 +378,14 @@ class LostItemFormScreen extends HookConsumerWidget {
                   isEditing: isEditing,
                   totalAmount: totalAmount,
                 ),
-                FutureBuilder<List<StoredImage>>(
-                  future: ImageStorage.getImages(
-                      initialFormData?['draft'] != null
-                          ? (initialFormData!['draft'] as DraftItem).imageIds ??
-                              []
-                          : [],
-                      ref.read(imageRepositoryProvider)),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting ||
-                        !snapshot.hasData) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-
-                    return ImageSection(
-                      initialImages: snapshot.data,
-                      onImagesChanged: (images) async {
-                        final imageIds = await ImageStorage.saveImages(
-                          images,
-                          ref.read(imageRepositoryProvider),
-                        );
-                        ref
-                            .read(formViewModelProvider.notifier)
-                            .addImages(imageIds);
-                      },
-                      onStoredImagesChanged: (images) {
-                        final imageIds = images.map((image) => image.id).toList();
-                        ref
-                            .read(formViewModelProvider.notifier)
-                            .removeImage(imageIds);
-                      },
-                    );
+                ImageSection(
+                  initialImages: storedImages.value,
+                  onImagesChanged: (images) {
+                    print('LostItemFormScreen - 選択された画像が変更されました:');
+                    print('  画像数: ${images.length}枚');
+                    selectedImages.value = images;
                   },
+                  onStoredImagesChanged: onStoredImagesChanged,
                 ),
                 const SizedBox(height: 32),
               ],

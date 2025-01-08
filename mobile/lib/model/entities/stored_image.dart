@@ -1,23 +1,43 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hive/hive.dart';
 
-part 'stored_image.freezed.dart';
 part 'stored_image.g.dart';
 
-@freezed
 @HiveType(typeId: 2)
-class StoredImage with _$StoredImage {
-  const factory StoredImage({
-    @HiveField(0)
-    required String id,
-    
-    @HiveField(1)
-    required String filePath,
-    
-    @HiveField(2)
-    required DateTime createdAt,
-  }) = _StoredImage;
+class StoredImage {
+  @HiveField(0)
+  final String id;
 
-  factory StoredImage.fromJson(Map<String, dynamic> json) =>
-      _$StoredImageFromJson(json);
+  @HiveField(1)
+  final String filePath;
+
+  @HiveField(2)
+  final String fileName;
+
+  @HiveField(3)
+  final int createdAtMillis;
+
+  StoredImage({
+    required this.id,
+    required this.filePath,
+    required this.fileName,
+    this.createdAtMillis = 0,
+  });
+
+  factory StoredImage.create({
+    required String id,
+    required String filePath,
+    required String fileName,
+    required DateTime createdAt,
+  }) {
+    return StoredImage(
+      id: id,
+      filePath: filePath,
+      fileName: fileName,
+      createdAtMillis: createdAt.millisecondsSinceEpoch,
+    );
+  }
+
+  String get path => filePath;
+  DateTime get createdAt =>
+      DateTime.fromMillisecondsSinceEpoch(createdAtMillis);
 }

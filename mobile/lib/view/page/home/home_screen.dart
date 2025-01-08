@@ -233,9 +233,9 @@ class HomeScreen extends HookConsumerWidget {
                                         item.imageIds != null &&
                                                 item.imageIds!.isNotEmpty
                                             ? FutureBuilder<StoredImage?>(
-                                                future: imageRepository
-                                                    .getImage(
-                                                        item.imageIds!.first),
+                                                future: Future.value(
+                                                    imageRepository.getImage(
+                                                        item.imageIds!.first)),
                                                 builder: (context, snapshot) {
                                                   if (snapshot.connectionState ==
                                                           ConnectionState
@@ -269,12 +269,14 @@ class HomeScreen extends HookConsumerWidget {
                                                           color: Colors.black
                                                               .withOpacity(0.1),
                                                           blurRadius: 8,
-                                                          offset: const Offset(0, 2),
+                                                          offset: const Offset(
+                                                              0, 2),
                                                         ),
                                                       ],
                                                       image: DecorationImage(
-                                                        image: FileImage(
-                                                            File(snapshot.data!.filePath)),
+                                                        image: FileImage(File(
+                                                            snapshot
+                                                                .data!.path)),
                                                         fit: BoxFit.cover,
                                                       ),
                                                     ),

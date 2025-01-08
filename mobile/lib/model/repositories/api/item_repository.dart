@@ -1,60 +1,62 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:http/http.dart' as http;
 
 part 'item_repository.g.dart';
 
 class ItemApiRepository {
-  late final String baseUrl;
+  static const _baseUrl = 'http://localhost:3000/api';
 
-  ItemApiRepository() {
-    print('\nAPIリポジトリ - 初期化:');
-    print('  プラットフォーム: ${Platform.operatingSystem}');
+  String get baseUrl => _baseUrl;
 
-    // iOSシミュレータ用のURLを強制的に使用
-    baseUrl = 'http://127.0.0.1:8080';
-    print('  選択されたURL: $baseUrl');
+  Future<void> submit(Map<String, dynamic> formData, List<String> imageIds) async {
+    print('ItemApiRepository - フォームを送信:');
+    print('  フォームデータ: $formData');
+    print('  画像ID: ${imageIds.length}枚');
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/items'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          ...formData,
+          'images': imageIds,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('APIエラー: ${response.statusCode}');
+      }
+
+      print('  送信完了');
+    } catch (e) {
+      print('  送信エラー: $e');
+      rethrow;
+    }
   }
 
   Future<void> createItem({
     required String name,
-    String? color,
-    String? description,
-    bool? needsReceipt,
-    required String routeName,
-    required String vehicleNumber,
-    String? otherLocation,
+    required String description,
+    required String location,
+    required DateTime date,
     required List<String> images,
-    required String finderName,
-    String? finderContact,
-    String? finderPostalCode,
-    String? finderAddress,
-    int? cash,
   }) async {
     final requestBody = {
-      'itemName': name,
-      'color': color ?? '',
-      'description': description ?? '',
-      'needsReceipt': needsReceipt ?? false,
-      'routeName': routeName,
-      'vehicleNumber': vehicleNumber,
-      'otherLocation': otherLocation,
+      'name': name,
+      'description': description,
+      'location': location,
+      'date': date.toIso8601String(),
       'images': images,
-      'finderName': finderName,
-      'finderContact': finderContact,
-      'finderPostalCode': finderPostalCode,
-      'finderAddress': finderAddress,
-      'cash': cash,
     };
 
     print('\nAPIリポジトリ - createItem:');
-    print('  URL: $baseUrl/items');
+    print('  URL: $_baseUrl/items');
     print('  リクエストボディ: $requestBody');
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/items'),
+        Uri.parse('$_baseUrl/items'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -62,32 +64,34 @@ class ItemApiRepository {
         body: jsonEncode(requestBody),
       );
 
-      if (response.statusCode != 201) {
-        throw Exception('API呼び出し失敗: ${response.body}');
+      if (response.statusCode != 200) {
+        throw Exception('APIエラー: ${response.statusCode}\n${response.body}');
       }
+
+      print('  送信完了');
     } catch (e) {
-      print('  エラー発生: $e');
+      print('  送信エラー: $e');
       rethrow;
     }
   }
 
   Future<List<Map<String, dynamic>>> getItems() async {
-    final response = await http.get(Uri.parse('$baseUrl/items'));
+    final response = await http.get(Uri.parse('$_baseUrl/items'));
 
     if (response.statusCode == 200) {
       final List<dynamic> items = jsonDecode(response.body);
       return items.cast<Map<String, dynamic>>();
     }
-    throw Exception('API呼び出し失敗: ${response.body}');
+    throw Exception('APIエラー: ${response.statusCode}');
   }
 
   Future<Map<String, dynamic>> getItem(String id) async {
-    final response = await http.get(Uri.parse('$baseUrl/items/$id'));
+    final response = await http.get(Uri.parse('$_baseUrl/items/$id'));
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    throw Exception('API呼び出し失敗: ${response.body}');
+    throw Exception('APIエラー: ${response.statusCode}');
   }
 }
 

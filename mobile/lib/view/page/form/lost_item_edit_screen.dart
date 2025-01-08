@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../viewmodel/form_viewmodel.dart';
+import '../../../model/entities/lost_item.dart';
 import 'lost_item_form_screen.dart';
 
 class LostItemEditScreen extends ConsumerWidget {
@@ -35,6 +36,7 @@ class LostItemEditScreen extends ConsumerWidget {
           initialFormData: {
             ...draft.formData,
             'draft': draft,  // draftオブジェクト全体を渡す
+            'images': draft.imageIds ?? [], // 画像IDを追加
           },
         );
       },

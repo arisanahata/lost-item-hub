@@ -58,18 +58,10 @@ class FormViewModel extends StateNotifier<AsyncValue<void>> {
       print('  APIにデータを送信');
       await _apiRepository.createItem(
         name: formData['itemName']?.toString() ?? '',
-        color: formData['itemColor']?.toString(),
-        description: formData['itemDescription']?.toString(),
-        needsReceipt: formData['needsReceipt'] as bool? ?? false,
-        routeName: formData['routeName']?.toString() ?? '',
-        vehicleNumber: formData['vehicleNumber']?.toString() ?? '',
-        otherLocation: formData['otherLocation']?.toString(),
+        description: formData['itemDescription']?.toString() ?? '',
+        location: formData['otherLocation']?.toString() ?? '',
+        date: DateTime.now(),
         images: savedImageIds,
-        finderName: formData['finderName']?.toString() ?? '',
-        finderContact: formData['finderPhone']?.toString(),
-        finderPostalCode: formData['postalCode']?.toString(),
-        finderAddress: formData['finderAddress']?.toString(),
-        cash: formData['cash'] as int?,
       );
       print('  API送信完了');
 
@@ -88,17 +80,50 @@ class FormViewModel extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> saveDraft(Map<String, dynamic> formData, List<String> imageIds,
+  Future<void> saveDraft(Map<String, dynamic> formData, List<String> imagePaths,
       {String? draftId}) async {
     try {
       state = const AsyncValue.loading();
       print('FormViewModel - 下書き保存を開始');
 
+      // 画像の保存処理
+      List<StoredImage> storedImages = [];
+      List<String> imageIds = [];
+
+      print('  画像の処理を開始: ${imagePaths.length}枚');
+      for (final path in imagePaths) {
+        if (path.contains('images/image_')) {
+          // 既存の画像
+          final id = path.split('/').last.split('.').first;
+          imageIds.add(id);
+          final image = await _imageRepository.getImage(id);
+          if (image != null) {
+            storedImages.add(image);
+            print('    既存の画像を追加: $id');
+          }
+        } else {
+          // 新規画像
+          final file = File(path);
+          if (await file.exists()) {
+            final image = await ImageStorage.saveImage(file, _imageRepository);
+            imageIds.add(image.id);
+            storedImages.add(image);
+            print('    新規画像を保存: $path -> ${image.id}');
+          }
+        }
+      }
+
+      print('  画像の処理完了:');
+      print('    保存済み: ${storedImages.length}枚');
+      print('    画像ID: $imageIds');
+
+      // 下書きの保存
       final now = DateTime.now();
       final draft = DraftItem(
         id: draftId ?? const Uuid().v4(),
         formData: formData,
         imageIds: imageIds,
+        storedImages: storedImages,
         createdAt: now,
         updatedAt: now,
       );

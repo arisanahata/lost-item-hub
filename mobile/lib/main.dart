@@ -4,29 +4,30 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'view/page/home/home_screen.dart';
 import 'model/entities/draft_item.dart';
+import 'model/entities/stored_image.dart';
 import 'model/repositories/local/item_repository.dart';
+import 'model/repositories/local/image_repository.dart';
 
 void main() async {
+  // Flutterの初期化
   WidgetsFlutterBinding.ensureInitialized();
 
   // Hiveの初期化
   await Hive.initFlutter();
+  Hive.registerAdapter(DraftItemAdapter());
+  Hive.registerAdapter(StoredImageAdapter());
 
-  // アダプターの登録（未登録の場合のみ）
-  if (!Hive.isAdapterRegistered(0)) {
-    Hive.registerAdapter(DraftItemAdapter());
-  }
+  // コンテナの作成
+  final container = ProviderContainer();
 
-  // ItemRepositoryの初期化
-  final repository = ItemRepository();
-  await repository.init();
+  // リポジトリの初期化
+  await container.read(itemRepositoryProvider).init();
+  await container.read(imageRepositoryProvider).init();
 
+  // アプリの起動
   runApp(
-    ProviderScope(
-      overrides: [
-        // ローカルストレージのリポジトリを初期化
-        itemRepositoryProvider.overrideWithValue(repository),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const MyApp(),
     ),
   );
