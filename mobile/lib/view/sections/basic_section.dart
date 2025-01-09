@@ -50,14 +50,7 @@ class BasicSection extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
-            validator: (value) {
-              if (isEditing) {
-                return value == null || value.isEmpty
-                    ? '遺失物の名称を入力してください'
-                    : null;
-              }
-              return null;
-            },
+            validator: null, // 確認画面遷移時のみチェックするため、ここでのバリデーションは不要
             onChanged: (value) {
               // 値が変更されたときだけ通知
               if (value != formKey.currentState?.fields['itemName']?.value) {
