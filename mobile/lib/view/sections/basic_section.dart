@@ -50,8 +50,14 @@ class BasicSection extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
-            validator:
-                FormBuilderValidators.required(errorText: '遺失物の名称を入力してください'),
+            validator: (value) {
+              if (isEditing) {
+                return value == null || value.isEmpty
+                    ? '遺失物の名称を入力してください'
+                    : null;
+              }
+              return null;
+            },
             onChanged: (value) {
               // 値が変更されたときだけ通知
               if (value != formKey.currentState?.fields['itemName']?.value) {
@@ -133,7 +139,8 @@ class BasicSection extends StatelessWidget {
                   borderSide: BorderSide(color: Color(0xFF1a56db))),
             ),
             maxLines: 3,
-            onChanged: (value) => onFieldChanged?.call('itemDescription', value),
+            onChanged: (value) =>
+                onFieldChanged?.call('itemDescription', value),
           ),
           const SizedBox(height: 16),
           FormBuilderRadioGroup(

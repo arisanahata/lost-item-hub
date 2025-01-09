@@ -30,12 +30,20 @@ class LostItemEditScreen extends ConsumerWidget {
           );
         }
 
+        // 自動保存を開始
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(formViewModelProvider.notifier).startAutoSave(
+                draft.formData,
+                draft.imageIds ?? [],
+              );
+        });
+
         return LostItemFormScreen(
           isEditing: true,
           draftId: draftId,
           initialFormData: {
             ...draft.formData,
-            'draft': draft,  // draftオブジェクト全体を渡す
+            'draft': draft, // draftオブジェクト全体を渡す
             'images': draft.imageIds ?? [], // 画像IDを追加
           },
         );

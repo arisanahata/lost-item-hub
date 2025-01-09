@@ -159,6 +159,31 @@ class LostItemFormScreen extends HookConsumerWidget {
       return null;
     }, [initialFormData]);
 
+    // フォームデータの自動保存用
+    useEffect(() {
+      void startAutoSave() {
+        if (formKey.value.currentState?.saveAndValidate() ?? false) {
+          final formData = Map<String, dynamic>.from(formKey.value.currentState!.value);
+          final storedImagePaths = storedImages.value.map((image) => image.filePath).toList();
+          final selectedImagePaths = selectedImages.value.map((file) => file.path).toList();
+          final allImagePaths = [...storedImagePaths, ...selectedImagePaths];
+          
+          ref.read(formViewModelProvider.notifier).startAutoSave(formData, allImagePaths);
+        }
+      }
+
+      // フォームの初期値が設定されている場合は自動保存を開始
+      if (initialFormData != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          startAutoSave();
+        });
+      }
+
+      return () {
+        ref.read(formViewModelProvider.notifier).stopAutoSave();
+      };
+    }, []);
+
     void onFieldChanged(String fieldName, dynamic value) {
       print('LostItemFormScreen - フィールドが変更されました:');
       print('  フィールド名: $fieldName');
@@ -172,6 +197,8 @@ class LostItemFormScreen extends HookConsumerWidget {
             selectedImages.value = List<XFile>.from(value);
           } else {
             filledFields.value = {...filledFields.value, fieldName};
+            isInteracting.value = true;
+
             final currentValue =
                 formKey.value.currentState?.fields[fieldName]?.value;
             if (currentValue != value) {
@@ -179,6 +206,16 @@ class LostItemFormScreen extends HookConsumerWidget {
               formKey.value.currentState?.fields[fieldName]?.didChange(value);
             } else {
               print('  フォームの値は既に最新: $value');
+            }
+
+            // フォームデータの自動保存
+            if (formKey.value.currentState?.saveAndValidate() ?? false) {
+              final formData = Map<String, dynamic>.from(formKey.value.currentState!.value);
+              final storedImagePaths = storedImages.value.map((image) => image.filePath).toList();
+              final selectedImagePaths = selectedImages.value.map((file) => file.path).toList();
+              final allImagePaths = [...storedImagePaths, ...selectedImagePaths];
+              
+              ref.read(formViewModelProvider.notifier).startAutoSave(formData, allImagePaths);
             }
           }
         });
@@ -274,6 +311,18 @@ class LostItemFormScreen extends HookConsumerWidget {
 
     Future<void> onSubmit() async {
       if (formKey.value.currentState?.saveAndValidate() ?? false) {
+        // 遺失物名称のバリデーション
+        final itemName = formKey.value.currentState?.fields['itemName']?.value as String?;
+        if (itemName == null || itemName.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('遺失物の名称を入力してください'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
         isSubmitting.value = true;
         try {
           final formData =
